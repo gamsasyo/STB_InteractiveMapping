@@ -405,6 +405,9 @@
     .slide { position: relative; display: flex !important; height: 100vh; page-break-after: always; }
     .hud, .progress { display: none; }
   }
+  .svchk { display:flex; align-items:center; gap:12px; padding:1.2vh 14px; border:1.5px solid var(--faint);
+           border-radius:10px; margin-bottom:1vh; font-size:clamp(15px,1.6vw,24px); cursor:pointer; }
+  .svchk input { width:20px; height:20px; accent-color:var(--accent); }
 </style>
 </head>
 <body>
@@ -733,6 +736,26 @@
     <div class="footer"><span>수퍼 테스트베드 LAB</span><span>12 / 13</span></div>
   </section>
 
+  <!-- 12b. 아두이노 수요조사 -->
+  <section class="slide">
+    <div class="slide-label">Wrap-up <span class="sub">— 아두이노 센서 수요조사</span></div>
+    <div class="body">
+      <p style="margin-bottom: 2.2vh;">3주차(7/23) 아두이노 수업 전에 센서를 구매합니다. <strong>관심 있는 것 모두</strong> 골라주세요.</p>
+      <div id="svform" style="max-width: 720px;">
+        <label class="svchk"><input type="checkbox" value="HC-SR04 초음파(거리)"> 📏 초음파 거리 센서 — 다가가면 반응</label>
+        <label class="svchk"><input type="checkbox" value="MPU-6050 자이로(기울기)"> 🌀 자이로/가속도 — 기울이고 흔들면 반응</label>
+        <label class="svchk"><input type="checkbox" value="가변저항(노브)"> 🎛 노브(가변저항) — 돌려서 조절</label>
+        <label class="svchk"><input type="checkbox" value="조도센서(빛)"> 💡 조도 센서 — 빛의 밝기로 반응</label>
+        <label class="svchk"><input type="checkbox" value="압력/터치"> 👆 압력·터치 센서</label>
+        <label class="svchk"><input type="checkbox" id="svexp"> ✅ 아두이노 써본 적 있어요</label>
+        <textarea id="svidea" rows="2" placeholder="하고 싶은 인터랙션이 있다면? (선택)" style="width:100%; font-size:16px; padding:10px; border:1.5px solid var(--faint); border-radius:9px; font-family:var(--sans); resize:none; margin-top:4px;"></textarea>
+        <button id="svsend" style="margin-top:12px; padding:13px 34px; font-size:17px; font-weight:700; color:#fff; background:var(--accent); border:0; border-radius:10px; cursor:pointer;">제출하기</button>
+        <span id="svmsg" style="margin-left:12px; font-size:15px;"></span>
+      </div>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
   <!-- 13. 마무리 -->
   <section class="slide">
     <div class="slide-label">Wrap-up</div>
@@ -814,6 +837,8 @@
   }
 
   document.addEventListener('keydown', (e) => {
+    if (/INPUT|TEXTAREA/.test(e.target.tagName)) return;   // 폼 입력 중엔 슬라이드 이동 금지
+
     if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(cur + 1); }
     if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(cur - 1); }
     if (e.key === 'Home') show(0);
@@ -844,6 +869,27 @@
   });
 
   show(parseInt(location.hash.slice(1)) - 1 || 0);
+</script>
+<script>
+(function(){
+  const btn = document.getElementById('svsend');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const msg = document.getElementById('svmsg');
+    let token = null;
+    try { token = localStorage.getItem('stb_token'); } catch(e){}
+    if (!token) { msg.textContent = '⚠ 스테이션 링크로 접속해야 제출돼요'; msg.style.color = '#c0392b'; return; }
+    const sensors = [...document.querySelectorAll('#svform input[type=checkbox]:not(#svexp):checked')].map(c => c.value);
+    try {
+      const r = await fetch('/api/survey', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({token, sensors, idea: document.getElementById('svidea').value,
+                              arduino_exp: document.getElementById('svexp').checked})});
+      const d = await r.json();
+      if (d.ok) { msg.textContent = '제출 완료! 고마워요 🙌'; msg.style.color = '#2e8b57'; }
+      else { msg.textContent = '⚠ ' + (d.error || '오류'); msg.style.color = '#c0392b'; }
+    } catch(e) { msg.textContent = '⚠ 스테이션 링크로 접속해야 제출돼요'; msg.style.color = '#c0392b'; }
+  });
+})();
 </script>
 </body>
 </html>
