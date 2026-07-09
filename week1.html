@@ -425,7 +425,7 @@
       </div>
       <p style="margin-top: 6vh;">신재영</p>
     </div>
-    <div class="footer"><span>ARTKOREA LAB 6F</span><span>2026.07.09</span></div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>2026.07.09</span></div>
   </section>
 
   <!-- TOC -->
@@ -740,7 +740,7 @@
       <ul class="clean">
         <li><strong>미니 공유</strong> — 각자 화면 30초씩 보여주기</li>
         <li><strong class="accent">아두이노 센서 수요조사</strong> — 3주차 전 구매를 위해 오늘 제출해주세요</li>
-        <li><strong>수업 자료 노션</strong> — 오늘 내용 · 확장 미션 · 설치 안내 전부 있습니다</li>
+        <li><strong>수업 자료 깃헙</strong> — <code>github.com/gamsasyo/STB_InteractiveMapping</code> 슬라이드 · 강의 PDF · TD 완성본 전부 있습니다</li>
         <li><strong>집에서 해볼 것</strong> — 오늘 만든 파일에 이펙트 하나만 더 얹어보기</li>
       </ul>
       <p style="margin-top: 6vh;" class="big center">수고하셨습니다</p>
@@ -826,6 +826,17 @@
   });
 
   /* 슬라이드 이동은 키보드로만 — 클릭/스와이프 넘김 제거 (하단 챕터 버튼·목차 클릭은 유지) */
+  /* 예외: ?touch=1 (스테이션 모바일 뷰)일 때만 스와이프 허용 */
+  if (new URLSearchParams(location.search).has('touch')) {
+    let tx0 = null;
+    document.addEventListener('touchstart', e => tx0 = e.touches[0].clientX);
+    document.addEventListener('touchend', e => {
+      if (tx0 === null) return;
+      const dx = e.changedTouches[0].clientX - tx0;
+      if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1));
+      tx0 = null;
+    });
+  }
 
   window.addEventListener('hashchange', () => {
     const n = parseInt(location.hash.slice(1)) - 1;
