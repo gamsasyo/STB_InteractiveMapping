@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>01_Hand — 허공 마우스 + 손으로 그리는 빛 · 수퍼 테스트베드 LAB 2주차</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --paper: #ffffff; --ink: #141414; --gray: #8d8d8d; --faint: #ececec;
+    --accent: #e8820c; --panel: #1d1d21; --panel-grid: #26262b; --node-body: #101012;
+    --fam-top: #a88bd4; --fam-chop: #8fbf6f; --wire: #7a7a82;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "JetBrains Mono", monospace;
+    --sans: -apple-system, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", sans-serif;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.65; }
+  .topnav {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+    padding: 10px 18px; background: rgba(255,255,255,.95);
+    border-bottom: 1px solid var(--faint); backdrop-filter: blur(6px);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .topnav a { color: var(--gray); text-decoration: none; padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+  .topnav a:hover { background: var(--faint); color: var(--ink); }
+  .topnav a.on { color: var(--accent); font-weight: 700; background: #fdf3e7; }
+  .topnav a.back { color: var(--ink); font-weight: 700; margin-right: 8px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 90px; }
+  .crumb { font-family: var(--mono); font-size: 13px; color: var(--gray); margin-bottom: 14px; }
+  .crumb b { color: var(--accent); }
+  h1 { font-family: var(--mono); font-size: clamp(30px, 5vw, 46px); letter-spacing: -0.02em; margin-bottom: 10px; }
+  .lead { font-size: clamp(17px, 2.2vw, 21px); color: #444; margin-bottom: 18px; }
+  .lead strong { color: var(--accent); }
+  .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 34px; }
+  .meta span { font-family: var(--mono); font-size: 12.5px; color: var(--gray);
+    border: 1px solid var(--faint); border-radius: 999px; padding: 4px 12px; }
+  h2 { font-size: clamp(21px, 2.6vw, 27px); font-weight: 800; letter-spacing: -0.01em;
+    margin: 46px 0 16px; padding-top: 14px; border-top: 2px solid var(--ink); }
+  h2 .no { font-family: var(--mono); color: var(--accent); margin-right: 8px; }
+  p { font-size: clamp(15px, 1.9vw, 17px); margin-bottom: 12px; }
+  .muted { color: var(--gray); }
+  .accent { color: var(--accent); }
+  code { font-family: var(--mono); background: var(--faint); padding: .1em .4em; border-radius: 5px; font-size: .88em; }
+  pre { font-family: var(--mono); font-size: 13.5px; line-height: 1.7; background: var(--panel); color: #cfcfd6;
+    border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 14px 0; }
+  pre .c { color: #7a7a82; } pre .o { color: var(--accent); } pre .g { color: var(--fam-chop); }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0 22px; }
+  th, td { padding: 10px 12px; font-size: 14.5px; text-align: left; border-bottom: 1px solid var(--faint); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 12px; color: var(--gray); font-weight: 500; letter-spacing: .06em; border-bottom: 2px solid var(--ink); }
+  td.k { font-family: var(--mono); white-space: nowrap; font-weight: 700; }
+  .chip { display: inline-block; font-family: var(--mono); font-weight: 700; font-size: 12.5px;
+    padding: .18em .55em; border-radius: 6px; }
+  .chip.top { background: var(--fam-top); color: #1c1428; }
+  .chip.chop { background: var(--fam-chop); color: #16210f; }
+  /* TD network panel */
+  .td-panel { background:
+      repeating-linear-gradient(0deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      repeating-linear-gradient(90deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      var(--panel);
+    border-radius: 12px; padding: 28px 22px; overflow-x: auto; margin: 16px 0 8px; }
+  .net-row { display: flex; align-items: center; min-width: max-content; }
+  .net-row + .net-row { margin-top: 26px; }
+  .node { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .node .chassis { width: 118px; height: 56px; background: var(--node-body);
+    border: 2px solid var(--fam, var(--fam-top)); border-radius: 6px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.35); }
+  .node .chassis::before, .node .chassis::after { content: ""; position: absolute; top: 18%; bottom: 18%;
+    width: 4px; background: var(--fam, var(--fam-top)); opacity: .85; border-radius: 2px; }
+  .node .chassis::before { left: -3px; } .node .chassis::after { right: -3px; }
+  .node .fam-tag { position: absolute; top: 4px; left: 7px; font-family: var(--mono); font-size: 8.5px;
+    color: var(--fam, var(--fam-top)); letter-spacing: .08em; }
+  .node .viewer { font-family: var(--mono); font-size: 12px; color: #cfcfd6; }
+  .node .opname { font-family: var(--mono); font-size: 11.5px; color: #b9b9c2; }
+  .node .krname { font-size: 11px; color: #77777f; }
+  .node.chop { --fam: var(--fam-chop); } .node.top { --fam: var(--fam-top); }
+  .wire { width: 42px; height: 2px; background: var(--wire); position: relative; margin: 0 3px;
+    transform: translateY(-14px); flex: 0 0 auto; }
+  .wire::after { content: ""; position: absolute; right: -1px; top: 50%; transform: translateY(-50%);
+    border-left: 7px solid var(--wire); border-top: 4.5px solid transparent; border-bottom: 4.5px solid transparent; }
+  .annot { font-family: var(--mono); color: var(--accent); font-size: 13px; line-height: 1.7; margin-top: 18px; }
+  /* build steps */
+  .bstep { display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding: 20px 0; border-bottom: 1px solid var(--faint); }
+  .bstep .sn { font-family: var(--mono); font-size: 19px; font-weight: 700; color: var(--accent); padding-top: 2px; }
+  .bstep h3 { font-size: 17.5px; font-weight: 800; margin-bottom: 6px; }
+  .bstep h3 .chip { margin-right: 6px; vertical-align: 2px; }
+  .bstep p { font-size: 15px; margin-bottom: 8px; }
+  .bstep table { margin: 10px 0 4px; }
+  .why { background: #fdf3e7; border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0;
+    padding: 10px 14px; font-size: 14px; margin: 10px 0 4px; }
+  .why b { color: var(--accent); }
+  ul.plain { margin: 6px 0 12px 2px; list-style: none; }
+  ul.plain li { font-size: 15px; padding-left: 1.4em; position: relative; margin-bottom: 7px; }
+  ul.plain li::before { content: ""; position: absolute; left: 0; top: .5em; width: .5em; height: .5em;
+    border-radius: 2px; background: var(--accent); }
+  .pagenav { display: flex; justify-content: space-between; margin-top: 60px; padding-top: 20px;
+    border-top: 2px solid var(--ink); font-family: var(--mono); font-size: 14px; }
+  .pagenav a { color: var(--ink); text-decoration: none; font-weight: 700; }
+  .pagenav a:hover { color: var(--accent); }
+  .pagenav .sub { display: block; font-size: 12px; color: var(--gray); font-weight: 400; margin-top: 3px; }
+  @media (max-width: 640px) { .bstep { grid-template-columns: 32px 1fr; } }
+</style>
+</head>
+<body>
+<nav class="topnav"><a class="back" href="week2.html">← 2주차 슬라이드</a><a class="on" href="week2_01_hand.html">01_Hand</a><a href="week2_02_theremin.html">02_Theremin</a><a href="week2_03_pose.html">03_Pose</a><a href="week2_04_twohands.html">04_TwoHands</a><a href="week2_05_pinch.html">05_Pinch</a></nav>
+<div class="wrap">
+<div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>01_Hand</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/01_Hand</b></div>
+
+<h1>01_Hand</h1>
+<p class="lead">검지 끝이 <strong>허공 마우스</strong>가 되고, 그 궤적이 잔상으로 남는다 — <strong>손으로 그리는 빛</strong>.</p>
+<div class="meta"><span>가이드 빌드 ①</span><span>노드 11개</span><span>CHOP 5 + TOP 5</span><span>난이도 ●○○</span></div>
+
+<h2><span class="no">A</span>완성 네트워크</h2>
+<div class="td-panel">
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">63→2</span></div><span class="opname">select_tip</span><span class="krname">검지끝만</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">0~1</span></div><span class="opname">math_range</span><span class="krname">범위 리매핑</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">handx·y</span></div><span class="opname">rename_hand</span><span class="krname">이름 부여</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">~</span></div><span class="opname">lag_smooth</span><span class="krname">지터 다림질</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">out</span></div><span class="opname">null_hand</span><span class="krname">출구 ★</span></div>
+  </div>
+  <div class="net-row">
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">●</span></div><span class="opname">circle_dot</span><span class="krname">커서</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">+</span></div><span class="opname">add_trail</span><span class="krname">합치기</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">out</span></div><span class="opname">null_out</span><span class="krname">완성</span></div>
+  </div>
+  <div class="net-row">
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">⟲</span></div><span class="opname">feedback1</span><span class="krname">직전 프레임</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">×0.93</span></div><span class="opname">level_fade</span><span class="krname">서서히 지움</span></div>
+  </div>
+  <p class="annot">윗줄 = 정규화 척추(CHOP) · 아랫줄 = 잔상 루프(TOP): feedback1 → level_fade → add_trail의 2번 입력, feedback1의 Target은 add_trail</p>
+</div>
+<div class="why"><b>척추.</b> 이번 주 모든 베이스는 같은 다섯 마디 — <code>Select → Math → Rename → Lag → Null</code>.
+소스(검지·손목·거리)와 매핑(빛·소리·블러)만 바뀝니다. 지난주 오디오 체인과도 같은 구조.</div>
+
+<h2><span class="no">B</span>단계별 빌드</h2>
+
+<div class="bstep"><div class="sn">01</div><div>
+<h3>데이터부터 눈으로 확인</h3>
+<p><code>hand_tracking2</code> 안의 <code>normalized_data</code> CHOP 뷰어를 열고 손을 흔들어보세요. <strong>21개 점 × x·y·z = 채널 63개</strong>가 출렁이면 준비 완료. 값은 이미 0~1로 정규화되어 나옵니다.</p>
+</div></div>
+
+<div class="bstep"><div class="sn">02</div><div>
+<h3><span class="chip chop">Select CHOP</span>select_tip — 63개 중 2개만</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">CHOPs</td><td><code>../hand_tracking2/normalized_data</code></td></tr>
+<tr><td class="k">Channel Names</td><td><code>h1:index_finger_tip:x h1:index_finger_tip:y</code></td></tr>
+</table>
+<div class="why"><b>왜?</b> 매핑에 필요한 건 검지끝 x, y 딱 두 개. 나머지 61개는 소음입니다. <code>h1</code> = 첫 번째로 잡힌 손(왼/오 보장 없음). z까지 쓰고 싶으면 패턴 <code>h1:index_finger_tip:*</code>.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">03</div><div>
+<h3><span class="chip chop">Math CHOP</span>math_range — 쓰는 범위만 0~1로</h3>
+<table>
+<tr><th>파라미터 (Range 페이지)</th><th>값</th></tr>
+<tr><td class="k">From Range</td><td><code>0.15</code> ~ <code>0.85</code></td></tr>
+<tr><td class="k">To Range</td><td><code>0</code> ~ <code>1</code></td></tr>
+</table>
+<div class="why"><b>왜?</b> 손은 화면 가장자리까지 못 갑니다 — 실제로는 0.15~0.85만 씀. 그 구간을 0~1로 늘려야 커서가 화면 전체를 커버합니다. <b>이 두 값이 감도 노브.</b><br>
+거울 반전은? MediaPipe COMP의 <code>Horizontal Flip</code>이 이미 처리 중이라 여기선 안 건드립니다.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">04</div><div>
+<h3><span class="chip chop">Rename CHOP</span>rename_hand — 채널명에 의미 부여</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">From</td><td><code>h1:index_finger_tip:x h1:index_finger_tip:y</code></td></tr>
+<tr><td class="k">To</td><td><code>handx handy</code></td></tr>
+</table>
+<div class="why"><b>왜?</b> 이후 익스프레션이 <code>op('null_hand')['handx']</code>처럼 <b>읽히게</b> 됩니다. 네트워크가 커질수록 이 습관이 생명.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">05</div><div>
+<h3><span class="chip chop">Lag CHOP</span>lag_smooth → <span class="chip chop">Null CHOP</span>null_hand</h3>
+<p>Lag <code>0.12 / 0.12</code>. 가만히 있어도 파르르 떨리는 지터를 다림질합니다. 마지막에 Null을 붙이면 <strong>정규화 척추 완성</strong> — 매핑은 전부 이 null_hand에서 뽑아 씁니다.</p>
+<div class="why"><b>Lag vs Filter?</b> Lag = 목표를 따라가는 <b>관성</b>(즉각 반응, 부드러운 꼬리) · Filter = 최근 값의 <b>평균</b>(더 매끈, 전체가 살짝 늦음). 커서엔 Lag. 둘 다 걸어보고 눈으로 고르세요.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">06</div><div>
+<h3><span class="chip top">Circle TOP</span>circle_dot — 허공 커서</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">Resolution</td><td><code>1280 × 720</code> (Common 페이지, Output Resolution = Custom)</td></tr>
+<tr><td class="k">Radius X</td><td><code>0.02</code> &nbsp;<span class="muted">(Radius Y에는 <code>me.par.radiusx</code> — 항상 정원)</span></td></tr>
+<tr><td class="k">Center X</td><td><code>op('null_hand')['handx'] - 0.5</code></td></tr>
+<tr><td class="k">Center Y</td><td><code>op('null_hand')['handy'] * -1 + 0.5</code> &nbsp;<span class="muted">(= 0.5 - handy)</span></td></tr>
+<tr><td class="k">Softness</td><td><code>0.005</code></td></tr>
+</table>
+<div class="why"><b>좌표계 번역.</b> MediaPipe는 <b>왼쪽 위가 (0,0)</b>, 아래로 갈수록 y 증가. TD의 Circle은 <b>화면 중앙이 (0,0)</b>, 위로 갈수록 +.
+그래서 x는 <code>-0.5</code>(중심 이동), y는 <code>0.5 - handy</code>(뒤집기 + 중심 이동).</div>
+<pre>MediaPipe            TD Circle
+(0,0)┌──────┐        ┌──────┐
+     │      │   →    │ (0,0)│   x' = x - 0.5
+     │      │        │  <span class="o">+</span>   │   y' = 0.5 - y
+     └──────┘(1,1)   └──────┘</pre>
+</div></div>
+
+<div class="bstep"><div class="sn">07</div><div>
+<h3><span class="chip top">Feedback + Level + Add</span>잔상 루프 — 지난주 그 구조</h3>
+<ul class="plain">
+<li><code>circle_dot</code> → <code>add_trail</code>의 <b>1번 입력</b></li>
+<li><code>feedback1</code> → <code>level_fade</code> → <code>add_trail</code>의 <b>2번 입력</b></li>
+<li><code>feedback1</code>의 <b>Target TOP = add_trail</b> (루프를 닫는 열쇠)</li>
+<li><code>level_fade</code>의 <b>Opacity = 0.93</b> → 잔상 길이 노브</li>
+<li><code>add_trail</code> → <code>null_out</code>, 뷰어 켜기 — 완성!</li>
+</ul>
+<div class="why"><b>원리.</b> Feedback은 <b>직전 프레임의 add_trail</b>을 기억했다가 되돌려줍니다. 매 프레임 93%로 어두워지며 쌓이니까 → 움직인 궤적이 꼬리처럼 남습니다. 1.0이면 화면이 영영 안 지워져요.</div>
+</div></div>
+
+<h2><span class="no">C</span>조절 노브</h2>
+<table>
+<tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
+<tr><td>커서 감도</td><td class="k">math_range · From Range</td><td>구간을 좁히면 민감해짐 (0.25~0.75)</td></tr>
+<tr><td>반응 속도 vs 부드러움</td><td class="k">lag_smooth · Lag</td><td>0.05 = 즉각 · 0.3 = 느긋</td></tr>
+<tr><td>잔상 길이</td><td class="k">level_fade · Opacity</td><td>0.85 = 짧게 · 0.97 = 길게</td></tr>
+<tr><td>붓 굵기</td><td class="k">circle_dot · Radius X</td><td>0.005 = 펜 · 0.06 = 붓</td></tr>
+</table>
+
+<h2><span class="no">D</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>트래킹이 자꾸 끊겨요</strong> — 조명을 밝게, 배경과 손의 대비 확보, 카메라에서 50cm~1m. 품질의 절반은 조명입니다.</li>
+<li><strong>값이 아예 안 움직여요</strong> — <code>hand_tracking2/helpers</code>의 <code>h1:hand_active</code>가 1인지 먼저 확인. 0이면 손 인식 자체가 안 되는 것.</li>
+<li><strong>Select에 노란 경고</strong> — CHOPs 경로는 <strong>노드의 부모 네트워크 기준</strong>입니다. 베이스 안에서는 <code>../hand_tracking2/…</code> (../../ 아님!)</li>
+</ul>
+
+<h2><span class="no">E</span>더 가보기</h2>
+<ul class="plain">
+<li><strong>두 번째 커서</strong> — 체인 복붙, Select만 <code>h1:middle_finger_tip:*</code>로. 검지＋중지 두 붓.</li>
+<li><strong>깊이로 굵기</strong> — <code>h1:index_finger_tip:z</code>를 뽑아 Radius에. 손을 앞으로 밀면 굵은 붓.</li>
+<li><strong>색 입히기</strong> — add_trail 뒤에 HSV Adjust, Hue에 <code>op('null_hand')['handx'] * 360</code>.</li>
+<li><strong>소리 얹기</strong> — 같은 null_hand로 <a href="week2_02_theremin.html">02_Theremin</a> 시작.</li>
+</ul>
+
+<div class="pagenav"><span></span><a href="week2_02_theremin.html" style="text-align:right;">02_Theremin →<span class="sub">손 = 악기, 허공 테레민</span></a></div>
+</div>
+</body>
+</html>

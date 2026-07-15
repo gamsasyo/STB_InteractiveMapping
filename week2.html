@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수퍼 테스트베드 LAB — 2주차 MediaPipe 인터랙션</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper: #ffffff;
+    --ink: #141414;
+    --gray: #8d8d8d;
+    --faint: #ececec;
+    --accent: #e8820c;            /* Shin's annotation orange */
+    --panel: #1d1d21;             /* TD network editor dark */
+    --panel-grid: #26262b;
+    --node-body: #101012;
+    --fam-top: #a88bd4;           /* TOP purple */
+    --fam-chop: #8fbf6f;          /* CHOP green */
+    --fam-dat: #d46a9f;
+    --wire: #7a7a82;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "JetBrains Mono", monospace;
+    --sans: -apple-system, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", sans-serif;
+  }
+
+  html, body { height: 100%; background: #cfcfcf; font-family: var(--sans); color: var(--ink); }
+
+  .deck { height: 100%; overflow: hidden; position: relative; background: var(--paper); }
+
+  .slide {
+    position: absolute; inset: 0;
+    background: var(--paper);
+    display: none;
+    flex-direction: column;
+    padding: 5.5vh 6vw calc(3vh + 46px);
+  }
+  .slide.active { display: flex; animation: enter .34s ease-out; }
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slide.active { animation: none; }
+    .wave { animation: none !important; }
+  }
+
+  /* ── top label, footer ─────────────────────────── */
+  .slide-label {
+    font-family: var(--mono);
+    font-size: clamp(14px, 1.35vw, 20px);
+    font-weight: 700;
+    letter-spacing: .01em;
+  }
+  .slide-label .sub { color: var(--gray); font-weight: 400; }
+
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+
+  .footer {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--mono);
+    font-size: clamp(11px, .95vw, 14px);
+    color: var(--gray);
+    padding-top: 2.5vh;
+  }
+
+  /* ── type ──────────────────────────────────────── */
+  h1 { font-family: var(--mono); font-size: clamp(36px, 5.4vw, 84px); font-weight: 700; letter-spacing: -0.03em; text-wrap: balance; }
+  h2 { font-size: clamp(28px, 3.6vw, 56px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4vh; text-wrap: balance; }
+  p, li { font-size: clamp(16px, 1.75vw, 27px); line-height: 1.6; }
+  .muted { color: var(--gray); }
+  .accent { color: var(--accent); }
+  .big { font-size: clamp(26px, 3.4vw, 52px); font-weight: 800; line-height: 1.35; letter-spacing: -0.02em; }
+  .center { text-align: center; }
+  .slide a { color: var(--accent); text-underline-offset: 3px; }
+  code {
+    font-family: var(--mono);
+    background: var(--faint);
+    padding: .08em .4em;
+    border-radius: 5px;
+    font-size: .9em;
+  }
+
+  /* ── TD network panel ──────────────────────────── */
+  .td-panel {
+    position: relative;
+    background:
+      repeating-linear-gradient(0deg,  transparent 0 59px, var(--panel-grid) 59px 60px),
+      repeating-linear-gradient(90deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      var(--panel);
+    border-radius: 12px;
+    padding: 5vh 3.5vw;
+    overflow: hidden;
+  }
+  .td-panel .annot {
+    font-family: var(--mono);
+    color: var(--accent);
+    font-size: clamp(13px, 1.4vw, 21px);
+    line-height: 1.7;
+  }
+
+  .net-row { display: flex; align-items: center; gap: 0; }
+
+  .node { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .node .chassis {
+    width: clamp(104px, 11vw, 168px);
+    height: clamp(58px, 6.2vw, 96px);
+    background: var(--node-body);
+    border: 2px solid var(--fam, var(--fam-top));
+    border-radius: 6px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.35);
+  }
+  .node .chassis::before, .node .chassis::after {
+    content: ""; position: absolute; top: 18%; bottom: 18%; width: 5px;
+    background: var(--fam, var(--fam-top)); opacity: .85; border-radius: 2px;
+  }
+  .node .chassis::before { left: -3.5px; }
+  .node .chassis::after  { right: -3.5px; }
+  .node .fam-tag {
+    position: absolute; top: 5px; left: 8px;
+    font-family: var(--mono); font-size: clamp(8px, .75vw, 11px);
+    color: var(--fam, var(--fam-top)); letter-spacing: .08em;
+  }
+  .node .viewer { font-family: var(--mono); font-size: clamp(11px, 1.15vw, 17px); color: #cfcfd6; }
+  .node .opname { font-family: var(--mono); font-size: clamp(11px, 1.1vw, 16px); color: #b9b9c2; }
+  .node .krname { font-size: clamp(11px, 1.05vw, 16px); color: #77777f; }
+
+  .node.chop { --fam: var(--fam-chop); }
+  .node.top  { --fam: var(--fam-top); }
+
+  .wire { flex: 1 1 0; min-width: 26px; height: 2px; background: var(--wire); position: relative; margin: 0 2px; transform: translateY(calc(-1 * clamp(10px, 1.1vw, 16px))); }
+  .wire::after {
+    content: ""; position: absolute; right: -1px; top: 50%;
+    transform: translateY(-50%);
+    border-left: 8px solid var(--wire);
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+  .wire .io {
+    position: absolute; top: 8px; width: 100%; text-align: center;
+    font-family: var(--mono); font-size: clamp(9px, .9vw, 13px); color: #6d6d75;
+  }
+
+  /* ── tables ────────────────────────────────────── */
+  table { border-collapse: collapse; width: 100%; }
+  th, td {
+    padding: 1.5vh 1.4vw;
+    font-size: clamp(15px, 1.7vw, 26px);
+    text-align: left;
+    border-bottom: 1px solid var(--faint);
+    vertical-align: middle;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: clamp(12px, 1.15vw, 17px);
+    color: var(--gray);
+    font-weight: 500;
+    letter-spacing: .06em;
+    border-bottom: 2px solid var(--ink);
+  }
+  .chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(13px, 1.4vw, 21px);
+    padding: .18em .6em;
+    border-radius: 6px;
+    color: #fff;
+  }
+  .chip.top  { background: var(--fam-top); color: #1c1428; }
+  .chip.chop { background: var(--fam-chop); color: #16210f; }
+  .chip.dim  { background: var(--faint); color: var(--gray); }
+  td.today { font-weight: 700; color: var(--accent); }
+
+  /* ── schedule ──────────────────────────────────── */
+  .sched { display: grid; grid-template-columns: auto 1fr; row-gap: 0; }
+  .sched .t, .sched .what {
+    padding: 1.7vh 0;
+    border-bottom: 1px solid var(--faint);
+    display: flex; align-items: center;
+  }
+  .sched .t {
+    font-family: var(--mono);
+    font-size: clamp(15px, 1.7vw, 26px);
+    color: var(--gray);
+    padding-right: 3vw;
+  }
+  .sched .what { font-size: clamp(16px, 1.85vw, 28px); gap: .6em; }
+  .sched .hot .t { color: var(--accent); font-weight: 700; }
+  .sched .hot.what, .sched .what.hot { font-weight: 800; }
+  .sched .hot { position: relative; }
+  .sched .what.hot::before {
+    content: ""; position: absolute; left: -1.6vw; top: 22%; bottom: 22%;
+    width: 5px; background: var(--accent); border-radius: 3px;
+  }
+
+  /* ── list ──────────────────────────────────────── */
+  ul.clean { list-style: none; display: flex; flex-direction: column; gap: 2.4vh; }
+  ul.clean li { padding-left: 1.5em; position: relative; }
+  ul.clean li::before {
+    content: ""; position: absolute; left: 0; top: .58em;
+    width: .55em; height: .55em; border-radius: 2px;
+    background: var(--accent);
+  }
+  ul.clean li strong { font-weight: 800; }
+
+  /* ── roadmap ───────────────────────────────────── */
+  .roadmap { display: flex; flex-direction: column; }
+  .step {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    align-items: center;
+    gap: 2vw;
+    padding: 1.55vh 1.5vw;
+    border-bottom: 1px solid var(--faint);
+  }
+  .step .n {
+    font-family: var(--mono);
+    font-size: clamp(15px, 1.6vw, 24px);
+    color: var(--gray);
+    width: 2em;
+  }
+  .step .op {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(15px, 1.7vw, 26px);
+    padding: .2em .6em;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .step .op.top  { background: var(--fam-top); color: #1c1428; }
+  .step .op.chop { background: var(--fam-chop); color: #16210f; }
+  .step .desc { font-size: clamp(15px, 1.75vw, 27px); }
+  .step .tag { font-family: var(--mono); font-size: clamp(11px, 1.1vw, 16px); color: var(--gray); white-space: nowrap; }
+  .step.hot { background: #fdf3e7; border-radius: 10px; border-bottom-color: transparent; }
+  .step.hot .n, .step.hot .tag { color: var(--accent); font-weight: 700; }
+  .step.hot .desc { font-weight: 800; }
+
+  /* ── mission cards ─────────────────────────────── */
+  .missions { display: grid; grid-template-columns: 1fr 1fr; gap: 2vh 1.6vw; }
+  .mcard {
+    border: 1.5px solid var(--faint);
+    border-radius: 12px;
+    padding: 2.2vh 1.6vw;
+    display: flex; flex-direction: column; gap: .8vh;
+  }
+  .mcard .mnum {
+    font-family: var(--mono);
+    font-size: clamp(11px, 1.05vw, 15px);
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: .1em;
+  }
+  .mcard h3 { font-size: clamp(17px, 1.9vw, 29px); font-weight: 800; }
+  .mcard p { font-size: clamp(13px, 1.45vw, 22px); line-height: 1.55; color: #444; }
+
+  /* ── pipeline (입력→정규화→매핑) ───────────────── */
+  .pipe { display: flex; align-items: stretch; gap: 0; }
+  .pipe .stage {
+    flex: 1;
+    border: 1.5px solid var(--faint);
+    border-radius: 12px;
+    padding: 2.6vh 1.4vw;
+    text-align: center;
+    display: flex; flex-direction: column; gap: 1.2vh; justify-content: center;
+  }
+  .pipe .stage.hot { border-color: var(--accent); background: #fdf3e7; }
+  .pipe .stage .eyebrow {
+    font-family: var(--mono);
+    font-size: clamp(12px, 1.15vw, 17px);
+    letter-spacing: .14em;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .pipe .stage .what { font-size: clamp(16px, 1.9vw, 29px); font-weight: 800; }
+  .pipe .stage .how { font-size: clamp(12px, 1.3vw, 20px); color: var(--gray); }
+  .pipe .arrow {
+    align-self: center;
+    font-family: var(--mono);
+    font-size: clamp(22px, 2.6vw, 40px);
+    color: var(--ink);
+    padding: 0 1vw;
+  }
+
+  /* ── keys table ────────────────────────────────── */
+  .keys .k { font-family: var(--mono); white-space: nowrap; }
+
+  /* ── wave word (몸 컨트롤러) ────────────────────── */
+  .wave { display: inline-block; animation: wave 4.2s ease-in-out infinite; transform-origin: 70% 80%; }
+  @keyframes wave {
+    0%, 84%, 100% { transform: none; }
+    87% { transform: rotate(-2deg) translateY(-2px); }
+    90% { transform: rotate(2.2deg) translateY(2px); }
+    93% { transform: rotate(-1.6deg); }
+    96% { transform: rotate(1deg); }
+  }
+
+  /* ── hand landmark figure ──────────────────────── */
+  .hand-fig { display: flex; align-items: center; gap: 3vw; }
+  .hand-fig svg { flex: 0 0 auto; height: min(58vh, 34vw); }
+  .hand-fig .legend { display: flex; flex-direction: column; gap: 1.6vh; min-width: 0; }
+  .hand-fig .legend .row {
+    display: flex; align-items: baseline; gap: 1vw;
+    font-size: clamp(14px, 1.6vw, 25px);
+  }
+  .hand-fig .legend .row code { white-space: nowrap; }
+  .hand-fig .legend .idx {
+    font-family: var(--mono); font-weight: 700; color: var(--accent);
+    width: 2.2em; flex: 0 0 auto;
+  }
+
+  /* ── 21 dots ───────────────────────────────────── */
+  .dots { display: flex; justify-content: center; gap: .55vw; margin-top: 3.2vh; }
+  .dots i { width: clamp(8px, .9vw, 14px); height: clamp(8px, .9vw, 14px); border-radius: 50%; background: var(--fam-chop); }
+  .dots i:nth-child(4n) { background: var(--accent); }
+
+  /* ── TOC slide ─────────────────────────────────── */
+  .toc { display: flex; flex-direction: column; }
+  .toc-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 2.2vw;
+    padding: 2.1vh 1vw;
+    border-bottom: 1px solid var(--faint);
+    cursor: pointer;
+  }
+  .toc-item:hover { background: #fdf3e7; }
+  .toc-item .cnum {
+    font-family: var(--mono);
+    font-size: clamp(14px, 1.5vw, 22px);
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .toc-item .ctitle { font-size: clamp(19px, 2.3vw, 36px); font-weight: 800; letter-spacing: -0.01em; }
+  .toc-item .ctitle .muted { font-weight: 400; font-size: .72em; }
+  .toc-item .cpage { font-family: var(--mono); font-size: clamp(12px, 1.15vw, 17px); color: var(--gray); }
+
+  /* ── bottom navigation bar ─────────────────────── */
+  .navbar {
+    position: fixed; left: 0; right: 0; bottom: 4px;
+    height: 42px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px;
+    background: rgba(255,255,255,.94);
+    border-top: 1px solid var(--faint);
+    backdrop-filter: blur(6px);
+    z-index: 10; user-select: none;
+  }
+  .navbar .chapters { display: flex; gap: 4px; overflow-x: auto; }
+  .navbar button {
+    appearance: none; border: 0; background: none;
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--gray);
+    padding: 6px 10px; border-radius: 6px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .navbar button:hover { background: var(--faint); color: var(--ink); }
+  .navbar button.on { color: var(--accent); font-weight: 700; background: #fdf3e7; }
+  .navbar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .navbar .meta { font-family: var(--mono); font-size: 12px; color: var(--gray); white-space: nowrap; padding-left: 12px; }
+
+  .progress {
+    position: fixed; left: 0; bottom: 0; height: 4px;
+    background: var(--accent);
+    width: 0; z-index: 11;
+    transition: width .25s ease;
+  }
+
+  @media print {
+    html, body { background: #fff; }
+    .deck { height: auto; overflow: visible; }
+    .slide { position: relative; display: flex !important; height: 100vh; page-break-after: always; }
+    .navbar, .progress { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- 1. 타이틀 -->
+  <section class="slide">
+    <div class="slide-label">수퍼 테스트베드 인터랙티브 매핑 LAB <span class="sub">— 2주차</span></div>
+    <div class="body center">
+      <h1>Touchdesigner<br>Tutorial</h1>
+      <p style="font-family: var(--mono); font-size: clamp(20px,2.6vw,40px); margin-top: 2.5vh;" class="accent">&lt;MediaPipe&gt;</p>
+      <div class="net-row" style="justify-content: center; margin-top: 8vh; gap: 0; max-width: 720px; margin-left: auto; margin-right: auto;">
+        <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">webcam</span></div></div>
+        <div class="wire" style="transform:none;"></div>
+        <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">hand</span></div></div>
+        <div class="wire" style="transform:none;"></div>
+        <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">visual</span></div></div>
+      </div>
+      <p style="margin-top: 6vh;">신재영</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>2026.07.16</span></div>
+  </section>
+
+  <!-- 2. TOC -->
+  <section class="slide">
+    <div class="slide-label">Contents <span class="sub">— 오늘 우리가 가는 길</span></div>
+    <div class="body">
+      <div class="toc" id="toc"></div>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 3. 오늘의 미션 -->
+  <section class="slide">
+    <div class="slide-label">MediaPipe <span class="sub">— 오늘의 목표</span></div>
+    <div class="body center">
+      <p class="muted" style="font-family: var(--mono); letter-spacing:.12em; margin-bottom: 4vh;">MISSION</p>
+      <p class="big" style="font-size: clamp(34px, 4.6vw, 76px);">"웹캠이 <span class="accent wave">몸 컨트롤러</span>가 된다"</p>
+      <p class="muted" style="margin-top: 6vh;">수업이 끝날 때, 지난주 마우스를 꽂았던 그 자리에서<br>여러분의 손이 파티클과 소리를 흔들고 있으면 성공입니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 4. 오늘의 흐름 -->
+  <section class="slide">
+    <div class="slide-label">MediaPipe <span class="sub">— 오늘의 흐름</span></div>
+    <div class="body">
+      <div class="sched">
+        <div class="t">14:00</div><div class="what">지난주 복습 — 입력→정규화→매핑 <span class="muted">+ 오늘 데모 먼저 보기</span></div>
+        <div class="t">14:20</div><div class="what">MediaPipe 개념 + 플러그인 세팅 <span class="muted">(지금 이 슬라이드)</span></div>
+        <div class="t hot">14:40</div><div class="what hot">가이드 빌드 ① 손 트래킹 <span class="muted">— 검지끝 좌표 → 정규화 → 매핑</span></div>
+        <div class="t hot">15:30</div><div class="what hot">가이드 빌드 ② 포즈 트래킹 <span class="muted">— 같은 패턴, 몸 전체로</span></div>
+        <div class="t">16:00</div><div class="what muted">휴식</div>
+        <div class="t">16:15</div><div class="what">자유 확장 — 확장 미션 · 버디 페어</div>
+        <div class="t">17:45</div><div class="what">미니 공유 <span class="muted">(각자 화면 30초)</span></div>
+      </div>
+      <p class="muted" style="margin-top: 3vh;">오늘도 따라오다 막히면 그 자리에서 바로 손 들기 — 마침 오늘은 손 드는 게 곧 인터랙션입니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 5. 복습: 입력→정규화→매핑 -->
+  <section class="slide">
+    <div class="slide-label">Recap <span class="sub">— 지난주 그 그림, 그대로</span></div>
+    <div class="body">
+      <div class="pipe">
+        <div class="stage hot">
+          <span class="eyebrow">INPUT</span>
+          <span class="what">입력</span>
+          <span class="how"><s>마우스 · 오디오</s><br><strong class="accent" style="font-size:1.2em;">오늘: 손 · 몸</strong></span>
+        </div>
+        <div class="arrow">→</div>
+        <div class="stage">
+          <span class="eyebrow">NORMALIZE</span>
+          <span class="what">정규화</span>
+          <span class="how">0~1 공용어로 번역<br>Math · Lag · Filter</span>
+        </div>
+        <div class="arrow">→</div>
+        <div class="stage">
+          <span class="eyebrow">MAP</span>
+          <span class="what">매핑</span>
+          <span class="how">비주얼 · 사운드<br>파라미터에 꽂기</span>
+        </div>
+      </div>
+      <p style="margin-top: 4.5vh;" class="center">머리는 지난주와 똑같습니다. <strong>바뀌는 건 <span class="accent">입력 한 칸</span>뿐.</strong><br><span class="muted">다음 주 아두이노도 이 그림 그대로 갑니다 — 오늘이 두 번째 복습.</span></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 6. MediaPipe란 -->
+  <section class="slide">
+    <div class="slide-label">MediaPipe <span class="sub">— 웹캠 영상에서 몸의 좌표를 읽는 ML</span></div>
+    <div class="body">
+      <ul class="clean">
+        <li><strong>구글의 실시간 몸 인식 머신러닝</strong> — 웹캠 영상을 넣으면 손 · 몸 · 얼굴의 <strong>좌표(숫자)</strong>가 나옵니다</li>
+        <li><strong>손 21 · 포즈 33 · 얼굴 478 랜드마크</strong> — 관절 하나하나가 x, y, z 채널로</li>
+        <li><strong>TOP이 CHOP이 되는 순간</strong> — 영상(이미지)이 신호(숫자)로 번역되면, 지난주 배운 CHOP 손동작을 전부 재사용</li>
+        <li><strong>특별한 장비 0</strong> — 웹캠만 있으면 됨. 키넥트 없이 몸 트래킹, 집에서도 연습 가능</li>
+        <li><strong>무료 플러그인</strong> — <code>torinmb/mediapipe-touchdesigner</code>, 설치 없이 .toe 파일 하나 열면 끝</li>
+      </ul>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 7. 손 21 랜드마크 -->
+  <section class="slide">
+    <div class="slide-label">MediaPipe <span class="sub">— 손 하나 = 21개의 점 = 63개의 채널</span></div>
+    <div class="body">
+      <div class="hand-fig">
+        <svg viewBox="0 0 420 470" aria-label="손 21 랜드마크">
+          <g stroke="#3a3a40" stroke-width="3" fill="none">
+            <path d="M200,420 L140,380 L95,330 L65,285 L42,245"/>
+            <path d="M200,420 L150,250 L140,185 L135,135 L130,88"/>
+            <path d="M150,250 L200,240 L200,165 L200,110 L200,58"/>
+            <path d="M200,240 L250,250 L255,180 L258,128 L260,80"/>
+            <path d="M250,250 L298,270 L310,215 L318,172 L325,130"/>
+            <path d="M200,420 L298,270"/>
+          </g>
+          <g fill="#8fbf6f">
+            <circle cx="200" cy="420" r="11"/>
+            <circle cx="140" cy="380" r="8"/><circle cx="95"  cy="330" r="8"/><circle cx="65"  cy="285" r="8"/>
+            <circle cx="150" cy="250" r="8"/><circle cx="140" cy="185" r="8"/><circle cx="135" cy="135" r="8"/>
+            <circle cx="200" cy="240" r="8"/><circle cx="200" cy="165" r="8"/><circle cx="200" cy="110" r="8"/><circle cx="200" cy="58" r="8"/>
+            <circle cx="250" cy="250" r="8"/><circle cx="255" cy="180" r="8"/><circle cx="258" cy="128" r="8"/><circle cx="260" cy="80" r="8"/>
+            <circle cx="298" cy="270" r="8"/><circle cx="310" cy="215" r="8"/><circle cx="318" cy="172" r="8"/><circle cx="325" cy="130" r="8"/>
+            <circle cx="42"  cy="245" r="9"/>
+          </g>
+          <circle cx="130" cy="88" r="14" fill="#e8820c"/>
+          <text x="200" y="452" text-anchor="middle" font-family="Menlo, monospace" font-size="17" fill="#8d8d8d">0 wrist</text>
+          <text x="6" y="212" text-anchor="start" font-family="Menlo, monospace" font-size="17" fill="#8d8d8d">4 thumb_tip</text>
+          <text x="118" y="55" text-anchor="middle" font-family="Menlo, monospace" font-size="19" font-weight="700" fill="#e8820c">8 index_finger_tip ★</text>
+        </svg>
+        <div class="legend">
+          <div class="row"><span class="idx">0</span><span><code>h1:wrist</code> — 손목, 손 전체 위치의 기준</span></div>
+          <div class="row"><span class="idx">4</span><span><code>h1:thumb_tip</code> — 엄지끝. 검지끝과의 거리 = <strong>핀치</strong></span></div>
+          <div class="row"><span class="idx">8</span><span><code class="accent" style="background:#fdf3e7;">h1:index_finger_tip</code> — <strong class="accent">오늘의 주인공.</strong> 허공의 마우스 커서</span></div>
+          <div class="row"><span class="idx">12+</span><span>중지(12) · 약지(16) · 새끼(20) 끝 — 제스처 판별 재료</span></div>
+          <div class="row" style="margin-top:1.5vh;"><span class="idx">×3</span><span>점마다 <code>x</code> <code>y</code> <code>z</code> — 21점 × 3 = <strong>채널 63개가 CHOP으로</strong> 쏟아집니다. 그래서 첫 일은 <strong class="accent">필요한 채널만 골라내기(Select)</strong></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 8. 플러그인 세팅 -->
+  <section class="slide">
+    <div class="slide-label">MediaPipe <span class="sub">— 플러그인 세팅 (5분 컷)</span></div>
+    <div class="body">
+      <table class="keys">
+        <tr><th>순서</th><th>하는 것</th></tr>
+        <tr><td>1. 실행</td><td class="k"><code>MediaPipe TouchDesigner.toe</code> 열기 <span class="muted">— 설치 과정 없음, 이 파일이 곧 플러그인</span></td></tr>
+        <tr><td>2. 웹캠</td><td class="k">MediaPipe 컴포넌트 파라미터의 <strong>웹캠 드롭다운</strong>에서 카메라 선택</td></tr>
+        <tr><td>3. 모델 ON</td><td class="k"><strong>Hand Tracking</strong> 켜기 → 화면 오버레이에 손 스켈레톤 뜨면 성공</td></tr>
+        <tr><td>4. 데이터 확인</td><td class="k"><code>hand_tracking</code> COMP의 <strong>CHOP 출력</strong> 뷰어 열기 — 채널 63개 확인</td></tr>
+        <tr><td>5. 다이어트</td><td class="k">안 쓰는 모델(Face·Pose 등)은 <strong>OFF</strong> <span class="muted">— GPU 부하가 커서 필요한 것만 켭니다</span></td></tr>
+      </table>
+      <p class="muted" style="margin-top: 3vh;">⚠ 손이 자꾸 끊기면: 조명을 밝게 · 배경과 손 대비 확보 · 카메라에서 50cm~1m 거리. 트래킹 품질의 절반은 <strong>조명</strong>입니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 9. 가이드 빌드 ① 손 트래킹 -->
+  <section class="slide">
+    <div class="slide-label">01_Hand <span class="sub">— 가이드 빌드 ① · 14:40~15:30</span></div>
+    <div class="body">
+      <div class="roadmap">
+        <div class="step">
+          <span class="n">01</span><span class="op chop">Select</span>
+          <span class="desc">채널 63개 중 검지끝만 — 패턴 <code>h1:index_finger_tip:*</code></span><span class="tag">첫 성공!</span>
+        </div>
+        <div class="step">
+          <span class="n">02</span><span class="op chop">Math</span>
+          <span class="desc">거울 반전 + 쓰는 범위만 0~1로 리매핑 <span class="muted">(다음 장에서 자세히)</span></span><span class="tag">정규화</span>
+        </div>
+        <div class="step">
+          <span class="n">03</span><span class="op chop">Rename → Lag</span>
+          <span class="desc">채널명에 의미 부여 <code>handx</code> <code>handy</code> → 지터 다림질</span><span class="tag">정규화</span>
+        </div>
+        <div class="step hot">
+          <span class="n">04</span><span class="op chop">Null + Referencing</span>
+          <span class="desc"><code>op('null_hand')['handx']</code> → Circle Center에 — <strong>허공 마우스 완성</strong></span><span class="tag">★ 미션 절반</span>
+        </div>
+        <div class="step">
+          <span class="n">05</span><span class="op top">Feedback 재사용</span>
+          <span class="desc">지난주 잔상 네트워크에 꽂기 — <strong class="accent">손으로 그리는 빛</strong></span><span class="tag">매핑</span>
+        </div>
+      </div>
+      <p class="muted" style="margin-top: 3vh;">척추 완성: <code>Select → Math → Rename → Lag → Null</code> — 지난주 오디오 때와 같은 체인, 소스만 손. 완성본은 <code>week2.toe</code>의 <code>01_Hand</code>(빛) · <code>02_Theremin</code>(소리) — 상세 가이드: <a href="week2_01_hand.html" target="_blank">01_Hand ↗</a> · <a href="week2_02_theremin.html" target="_blank">02_Theremin ↗</a></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 10. 정규화 디테일 -->
+  <section class="slide">
+    <div class="slide-label">01_Hand <span class="sub">— 이미 0~1인데 왜 또 정규화?</span></div>
+    <div class="body">
+      <p style="margin-bottom: 2.5vh;">MediaPipe는 친절하게 <strong>0~1로 좌표를 줍니다.</strong> 그런데 바로 꽂으면 세 가지가 어긋납니다 — 정규화는 "범위 맞추기"만이 아니라 <strong class="accent">신호를 쓸 수 있게 다듬는 일 전부</strong>입니다.</p>
+      <table>
+        <tr><th>문제</th><th>증상</th><th>처방</th></tr>
+        <tr><td><strong>거울이 아님</strong></td><td>손을 왼쪽으로 → 화면은 오른쪽으로</td><td><span class="chip chop">Math</span> <code>1 - x</code> 뒤집기</td></tr>
+        <tr><td><strong>지터(떨림)</strong></td><td>가만히 있어도 값이 파르르</td><td><span class="chip chop">Lag</span> 관성 · <span class="chip chop">Filter</span> 스무딩</td></tr>
+        <tr><td><strong>못 쓰는 구석</strong></td><td>화면 끝까지 손이 안 감 — 실제론 0.2~0.8만 씀</td><td><span class="chip chop">Math</span> From <code>0.2~0.8</code> → To <code>0~1</code></td></tr>
+      </table>
+      <p style="margin-top: 3vh;"><strong>Lag vs Filter, 언제 뭘?</strong> <span class="chip chop">Lag</span>는 목표를 <strong>따라가는 관성</strong>(반응은 즉각, 꼬리가 부드러움) · <span class="chip chop">Filter</span>는 최근 값의 <strong>평균</strong>(더 매끈, 대신 전체가 살짝 늦음). 커서엔 Lag, 배경처럼 느긋한 값엔 Filter — <strong class="accent">둘 다 걸고 귀 대신 눈으로 고르세요.</strong></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 11. 매핑: 파티클과 사운드 -->
+  <section class="slide">
+    <div class="slide-label">01_Hand <span class="sub">— 매핑: 같은 손, 두 개의 출구</span></div>
+    <div class="body">
+      <div class="td-panel">
+        <div class="net-row" style="margin-bottom: 4vh;">
+          <div class="node chop">
+            <div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">handx·handy</span></div>
+            <span class="opname">null_hand</span><span class="krname">정규화된 손</span>
+          </div>
+          <div class="wire"><span class="io">Referencing</span></div>
+          <div class="node top">
+            <div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">✸</span></div>
+            <span class="opname">particles</span><span class="krname">파티클 발생 위치</span>
+          </div>
+          <div class="wire"><span class="io">+ feedback</span></div>
+          <div class="node top">
+            <div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">out</span></div>
+            <span class="opname">null_out</span><span class="krname">손으로 그리는 빛</span>
+          </div>
+        </div>
+        <div class="net-row">
+          <div class="node chop">
+            <div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">handx·handy</span></div>
+            <span class="opname">null_hand</span><span class="krname">같은 손</span>
+          </div>
+          <div class="wire"><span class="io">y→pitch · x→volume</span></div>
+          <div class="node chop">
+            <div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">∿</span></div>
+            <span class="opname">audiooscillator</span><span class="krname">소리 만들기</span>
+          </div>
+          <div class="wire"><span class="io">Out</span></div>
+          <div class="node chop">
+            <div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">🔊</span></div>
+            <span class="opname">audiodeviceout</span><span class="krname">스피커</span>
+          </div>
+        </div>
+        <p class="annot" style="margin-top: 4vh;">null_hand 하나에서 두 갈래 ──▶ 손 올리면 음이 높아지고, 흔들면 빛이 흩어집니다. 허공 테레민.</p>
+      </div>
+      <p class="muted" style="margin-top: 3vh;">정규화까지 해두면 매핑은 <strong>갈아끼우기</strong>입니다 — 어제 마우스가 하던 일을 오늘 손이, 다음 주엔 센서가 합니다. <span class="muted">가이드: <a href="week2_01_hand.html" target="_blank">01_Hand ↗</a> · <a href="week2_02_theremin.html" target="_blank">02_Theremin ↗</a></span></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 12. 가이드 빌드 ② 포즈 -->
+  <section class="slide">
+    <div class="slide-label">03_Pose <span class="sub">— 가이드 빌드 ② · 15:30~16:00 · 같은 패턴, 몸 전체로</span></div>
+    <div class="body">
+      <div class="roadmap">
+        <div class="step">
+          <span class="n">01</span><span class="op chop">Pose ON</span>
+          <span class="desc">Hand OFF → Pose ON — 이번엔 <strong>몸 33개 랜드마크</strong> (어깨·팔꿈치·손목·무릎…)</span><span class="tag">전환 1분</span>
+        </div>
+        <div class="step">
+          <span class="n">02</span><span class="op chop">Select → … → Null</span>
+          <span class="desc">양쪽 손목(wrist) x, y 선택 → <strong>아까 만든 체인 복붙</strong> — 새 개념 0개</span><span class="tag">복습</span>
+        </div>
+        <div class="step hot">
+          <span class="n">03</span><span class="op chop">Math (두 채널 연산)</span>
+          <span class="desc">두 손목 <strong>거리</strong> = 팔 벌린 정도 → Scale에 꽂기 — <strong>팔을 벌리면 화면이 커진다</strong></span><span class="tag">★ 포즈 인터랙션</span>
+        </div>
+        <div class="step">
+          <span class="n">04</span><span class="op top">자유 매핑</span>
+          <span class="desc">머리 y → 색 · 몸 기울기 → 회전 · 점프 → 플래시 — 몸이 곧 파라미터 패널</span><span class="tag">자유 확장으로</span>
+        </div>
+      </div>
+      <p class="muted" style="margin-top: 3vh;">완성본 <code>week2.toe /project1/03_Pose</code> — <a href="week2_03_pose.html" target="_blank">상세 가이드 ↗</a>. ★ 칠판의 그 그림 — 손이든 몸이든 <strong>입력→정규화→매핑</strong>, 다음 주 아두이노에서 세 번째로 만납니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 13. 확장 미션 -->
+  <section class="slide">
+    <div class="slide-label">Missions <span class="sub">— 확장 미션 (가이드 빌드를 마친 분)</span></div>
+    <div class="body">
+      <div class="missions">
+        <div class="mcard">
+          <span class="mnum">MISSION 01 — 두 손</span>
+          <h3>두 손 사이의 공간</h3>
+          <p><code>h1</code> · <code>h2</code> 두 손 검지끝 거리 → <code>Math</code>로 계산 → 줌/블러 세기. 두 손을 벌렸다 모으면 화면이 숨쉬게.</p>
+        </div>
+        <div class="mcard">
+          <span class="mnum">MISSION 02 — 제스처 트리거</span>
+          <h3>집으면 터진다</h3>
+          <p>helpers 출력의 <code>h1:pinch_midpoint:distance</code> → <code>Logic CHOP</code>(문턱값) → 핀치하는 순간 파티클 폭발·플래시.</p>
+        </div>
+        <div class="mcard">
+          <span class="mnum">MISSION 03 — 얼굴</span>
+          <h3>얼굴도 컨트롤러</h3>
+          <p>Face 모델 ON → 입 벌린 정도, 고개 기울기를 뽑아 매핑. 표정으로 연주하는 화면 — 조용히 윙크로 씬 전환.</p>
+        </div>
+        <div class="mcard">
+          <span class="mnum">MISSION 04 — 미니 브리프</span>
+          <h3>몸으로 연주하는 30초</h3>
+          <p>"악기를 들지 않고 소리와 빛을 동시에 연주하기" — 손·몸·얼굴 아무거나. 17:45 미니 공유에서 시연.</p>
+        </div>
+      </div>
+      <p class="muted" style="margin-top: 2.6vh;">완성본·가이드: 미션1 = <a href="week2_04_twohands.html" target="_blank">04_TwoHands ↗</a> · 미션2 = <a href="week2_05_pinch.html" target="_blank">05_Pinch ↗</a>. 미션 2까지 완료한 분은 주변에 막힌 분을 도와주세요 — 가르치는 것이 가장 빨리 배우는 방법입니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 14. 다음 주 예고 -->
+  <section class="slide">
+    <div class="slide-label">Next <span class="sub">— 3주차 예고 (7/23)</span></div>
+    <div class="body center">
+      <p class="muted" style="margin-bottom: 3.5vh;">오늘 손 좌표를 꽂았던 그 자리에</p>
+      <p class="big" style="font-size: clamp(30px, 4vw, 66px);">다음 주엔 <span class="accent">물리 세계의 센서</span>가<br>들어옵니다</p>
+      <p class="muted" style="margin-top: 4vh;">아두이노 — 거리 · 기울기 · 노브가 CHOP 신호가 되는 날.<br>수요조사해주신 센서로 키트를 준비합니다. 같은 척추, 세 번째 소스.</p>
+      <p class="muted" style="margin-top: 3vh;">📷 다음 주는 <strong>프로젝트 소개 + 멘토링</strong>이 함께 있고, <strong>촬영</strong>이 있는 날입니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 15. 마무리 -->
+  <section class="slide">
+    <div class="slide-label">Wrap-up</div>
+    <div class="body">
+      <ul class="clean">
+        <li><strong>미니 공유</strong> — 각자 화면 30초씩, "몸으로 연주하는 30초" 환영</li>
+        <li><strong>집에서 해볼 것</strong> — 플러그인도 웹캠도 집에 있습니다. 오늘 체인에 매핑 하나만 더 얹어보기</li>
+        <li><strong>수업 자료 깃헙</strong> — <code>github.com/gamsasyo/STB_InteractiveMapping</code> 슬라이드 + <strong>베이스별 상세 가이드 5종</strong> (집에서 따라 만들 수 있게 파라미터까지 전부). TD 완성본 파일은 현장에서 공유합니다</li>
+        <li><strong class="accent">프로젝트 씨앗</strong> — 다음 주 프로젝트 소개가 시작됩니다. "내 몸/센서로 뭘 움직이고 싶은지" 한 문장만 품고 오세요</li>
+      </ul>
+      <p style="margin-top: 6vh;" class="big center">수고하셨습니다</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+</div>
+
+<nav class="navbar" id="navbar">
+  <div class="chapters" id="chapters"></div>
+  <div class="meta" id="meta"></div>
+</nav>
+<div class="progress" id="progress"></div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const bar = document.getElementById('progress');
+  const meta = document.getElementById('meta');
+  let cur = 0;
+
+  /* 챕터 정의: slide = 시작 슬라이드 인덱스(0-base) */
+  const chapters = [
+    { num: '00', title: '인트로',    desc: '오늘의 미션 · 흐름',                        slide: 0 },
+    { num: '01', title: '복습',      desc: '입력→정규화→매핑 — 입력 칸만 바뀐다',        slide: 4 },
+    { num: '02', title: 'MediaPipe', desc: '개념 · 손 21 랜드마크 · 플러그인 세팅',       slide: 5 },
+    { num: '03', title: '01_Hand',   desc: '가이드 빌드 ① — 손 → 정규화 → 파티클·사운드', slide: 8 },
+    { num: '04', title: '03_Pose',   desc: '가이드 빌드 ② — 포즈 인터랙션 · 확장 미션',   slide: 11 },
+    { num: '05', title: '마무리',    desc: '다음 주 예고(아두이노) · 정리',              slide: 13 },
+  ];
+  const chapterOf = i => chapters.reduce((a, c, k) => i >= c.slide ? k : a, 0);
+
+  /* 목차 슬라이드 렌더 */
+  const toc = document.getElementById('toc');
+  chapters.forEach((c, k) => {
+    const el = document.createElement('div');
+    el.className = 'toc-item';
+    el.innerHTML = `<span class="cnum">${c.num}</span>` +
+      `<span class="ctitle">${c.title} &nbsp;<span class="muted">${c.desc}</span></span>` +
+      `<span class="cpage">p.${c.slide + 1}</span>`;
+    el.addEventListener('click', (e) => { e.stopPropagation(); show(c.slide); });
+    toc.appendChild(el);
+  });
+
+  /* 하단 네비게이션 렌더 */
+  const chBox = document.getElementById('chapters');
+  const navBtns = chapters.map((c, k) => {
+    const b = document.createElement('button');
+    b.textContent = `${c.num} ${c.title}`;
+    b.addEventListener('click', (e) => { e.stopPropagation(); show(c.slide); });
+    chBox.appendChild(b);
+    return b;
+  });
+
+  /* 푸터 페이지 번호 자동 갱신 */
+  slides.forEach((s, k) => {
+    const last = s.querySelector('.footer span:last-child');
+    if (last && /^\d+\s*\/\s*\d+$/.test(last.textContent.trim())) {
+      last.textContent = `${k + 1} / ${slides.length}`;
+    }
+  });
+
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, k) => s.classList.toggle('active', k === cur));
+    const ch = chapterOf(cur);
+    navBtns.forEach((b, k) => b.classList.toggle('on', k === ch));
+    meta.textContent = `${cur + 1} / ${slides.length} · ←→ 이동 · 1~6 챕터 · F 전체화면`;
+    bar.style.width = ((cur + 1) / slides.length * 100) + '%';
+    if (location.hash !== '#' + (cur + 1)) history.replaceState(null, '', '#' + (cur + 1));
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (/INPUT|TEXTAREA/.test(e.target.tagName)) return;
+
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(cur + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(cur - 1); }
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End') show(slides.length - 1);
+    if (e.key >= '1' && e.key <= String(chapters.length)) show(chapters[+e.key - 1].slide);
+    if (e.key.toLowerCase() === 't') show(1);
+    if (e.key.toLowerCase() === 'f') {
+      document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    }
+  });
+
+  /* 슬라이드 이동은 키보드로만 — 예외: ?touch=1 (스테이션 모바일 뷰)일 때만 스와이프 허용 */
+  if (new URLSearchParams(location.search).has('touch')) {
+    let tx0 = null;
+    document.addEventListener('touchstart', e => tx0 = e.touches[0].clientX);
+    document.addEventListener('touchend', e => {
+      if (tx0 === null) return;
+      const dx = e.changedTouches[0].clientX - tx0;
+      if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1));
+      tx0 = null;
+    });
+  }
+
+  window.addEventListener('hashchange', () => {
+    const n = parseInt(location.hash.slice(1)) - 1;
+    if (!isNaN(n) && n !== cur) show(n);
+  });
+
+  show(parseInt(location.hash.slice(1)) - 1 || 0);
+</script>
+</body>
+</html>
