@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>08_RPS_Chop — CHOP 온리 가위바위보 · 수퍼 테스트베드 LAB 2주차</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --paper: #ffffff; --ink: #141414; --gray: #8d8d8d; --faint: #ececec;
+    --accent: #e8820c; --panel: #1d1d21; --panel-grid: #26262b; --node-body: #101012;
+    --fam-top: #a88bd4; --fam-chop: #8fbf6f; --wire: #7a7a82;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "JetBrains Mono", monospace;
+    --sans: -apple-system, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", sans-serif;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.65; }
+  .topnav {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+    padding: 10px 18px; background: rgba(255,255,255,.95);
+    border-bottom: 1px solid var(--faint); backdrop-filter: blur(6px);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .topnav a { color: var(--gray); text-decoration: none; padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+  .topnav a:hover { background: var(--faint); color: var(--ink); }
+  .topnav a.on { color: var(--accent); font-weight: 700; background: #fdf3e7; }
+  .topnav a.back { color: var(--ink); font-weight: 700; margin-right: 8px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 90px; }
+  .crumb { font-family: var(--mono); font-size: 13px; color: var(--gray); margin-bottom: 14px; }
+  .crumb b { color: var(--accent); }
+  h1 { font-family: var(--mono); font-size: clamp(30px, 5vw, 46px); letter-spacing: -0.02em; margin-bottom: 10px; }
+  .lead { font-size: clamp(17px, 2.2vw, 21px); color: #444; margin-bottom: 18px; }
+  .lead strong { color: var(--accent); }
+  .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 34px; }
+  .meta span { font-family: var(--mono); font-size: 12.5px; color: var(--gray);
+    border: 1px solid var(--faint); border-radius: 999px; padding: 4px 12px; }
+  h2 { font-size: clamp(21px, 2.6vw, 27px); font-weight: 800; letter-spacing: -0.01em;
+    margin: 46px 0 16px; padding-top: 14px; border-top: 2px solid var(--ink); }
+  h2 .no { font-family: var(--mono); color: var(--accent); margin-right: 8px; }
+  p { font-size: clamp(15px, 1.9vw, 17px); margin-bottom: 12px; }
+  .muted { color: var(--gray); }
+  .accent { color: var(--accent); }
+  code { font-family: var(--mono); background: var(--faint); padding: .1em .4em; border-radius: 5px; font-size: .88em; }
+  pre { font-family: var(--mono); font-size: 13.5px; line-height: 1.7; background: var(--panel); color: #cfcfd6;
+    border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 14px 0; }
+  pre .c { color: #7a7a82; } pre .o { color: var(--accent); } pre .g { color: var(--fam-chop); }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0 22px; }
+  th, td { padding: 10px 12px; font-size: 14.5px; text-align: left; border-bottom: 1px solid var(--faint); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 12px; color: var(--gray); font-weight: 500; letter-spacing: .06em; border-bottom: 2px solid var(--ink); }
+  td.k { font-family: var(--mono); white-space: nowrap; font-weight: 700; }
+  .chip { display: inline-block; font-family: var(--mono); font-weight: 700; font-size: 12.5px;
+    padding: .18em .55em; border-radius: 6px; }
+  .chip.top { background: var(--fam-top); color: #1c1428; }
+  .chip.chop { background: var(--fam-chop); color: #16210f; }
+  /* TD network panel */
+  .td-panel { background:
+      repeating-linear-gradient(0deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      repeating-linear-gradient(90deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      var(--panel);
+    border-radius: 12px; padding: 28px 22px; overflow-x: auto; margin: 16px 0 8px; }
+  .net-row { display: flex; align-items: center; min-width: max-content; }
+  .net-row + .net-row { margin-top: 26px; }
+  .node { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .node .chassis { width: 118px; height: 56px; background: var(--node-body);
+    border: 2px solid var(--fam, var(--fam-top)); border-radius: 6px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.35); }
+  .node .chassis::before, .node .chassis::after { content: ""; position: absolute; top: 18%; bottom: 18%;
+    width: 4px; background: var(--fam, var(--fam-top)); opacity: .85; border-radius: 2px; }
+  .node .chassis::before { left: -3px; } .node .chassis::after { right: -3px; }
+  .node .fam-tag { position: absolute; top: 4px; left: 7px; font-family: var(--mono); font-size: 8.5px;
+    color: var(--fam, var(--fam-top)); letter-spacing: .08em; }
+  .node .viewer { font-family: var(--mono); font-size: 12px; color: #cfcfd6; }
+  .node .opname { font-family: var(--mono); font-size: 11.5px; color: #b9b9c2; }
+  .node .krname { font-size: 11px; color: #77777f; }
+  .node.chop { --fam: var(--fam-chop); } .node.top { --fam: var(--fam-top); }
+  .wire { width: 42px; height: 2px; background: var(--wire); position: relative; margin: 0 3px;
+    transform: translateY(-14px); flex: 0 0 auto; }
+  .wire::after { content: ""; position: absolute; right: -1px; top: 50%; transform: translateY(-50%);
+    border-left: 7px solid var(--wire); border-top: 4.5px solid transparent; border-bottom: 4.5px solid transparent; }
+  .annot { font-family: var(--mono); color: var(--accent); font-size: 13px; line-height: 1.7; margin-top: 18px; }
+  /* build steps */
+  .bstep { display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding: 20px 0; border-bottom: 1px solid var(--faint); }
+  .bstep .sn { font-family: var(--mono); font-size: 19px; font-weight: 700; color: var(--accent); padding-top: 2px; }
+  .bstep h3 { font-size: 17.5px; font-weight: 800; margin-bottom: 6px; }
+  .bstep h3 .chip { margin-right: 6px; vertical-align: 2px; }
+  .bstep p { font-size: 15px; margin-bottom: 8px; }
+  .bstep table { margin: 10px 0 4px; }
+  .why { background: #fdf3e7; border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0;
+    padding: 10px 14px; font-size: 14px; margin: 10px 0 4px; }
+  .why b { color: var(--accent); }
+  ul.plain { margin: 6px 0 12px 2px; list-style: none; }
+  ul.plain li { font-size: 15px; padding-left: 1.4em; position: relative; margin-bottom: 7px; }
+  ul.plain li::before { content: ""; position: absolute; left: 0; top: .5em; width: .5em; height: .5em;
+    border-radius: 2px; background: var(--accent); }
+  .pagenav { display: flex; justify-content: space-between; margin-top: 60px; padding-top: 20px;
+    border-top: 2px solid var(--ink); font-family: var(--mono); font-size: 14px; }
+  .pagenav a { color: var(--ink); text-decoration: none; font-weight: 700; }
+  .pagenav a:hover { color: var(--accent); }
+  .pagenav .sub { display: block; font-size: 12px; color: var(--gray); font-weight: 400; margin-top: 3px; }
+  @media (max-width: 640px) { .bstep { grid-template-columns: 32px 1fr; } }
+</style>
+</head>
+<body>
+<nav class="topnav"><a class="back" href="week2.html">← 2주차 슬라이드</a><a href="week2_01_hand.html">01_Hand</a><a href="week2_02_theremin.html">02_Theremin</a><a href="week2_03_pose.html">03_Pose</a><a href="week2_04_twohands.html">04_TwoHands</a><a href="week2_05_pinch.html">05_Pinch</a><a href="week2_06_rps.html">06_RPS</a><a href="week2_07_rpsgeo.html">07_RPS_Geo</a><a class="on" href="week2_08_rpschop.html">08_RPS_Chop</a></nav>
+<div class="wrap">
+<div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>08_RPS_Chop</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/08_RPS_Chop</b></div>
+
+<h1>08_RPS_Chop</h1>
+<p class="lead">07과 <strong>완전히 같은 수학</strong>을 — 파이썬 없이 <strong>순수 CHOP 노드만으로</strong>. 코드가 하던 일이 전부 와이어로 보입니다.</p>
+<div class="meta"><span>07의 CHOP 번역판</span><span>노드 ~50개</span><span>새 무기: Length · 퍼지 AND</span><span>난이도 ●●●</span></div>
+
+<h2><span class="no">A</span>Script → CHOP 번역표</h2>
+<p>07의 파이썬 한 줄 한 줄이 어떤 노드가 되는지 — 이 표가 이 베이스의 전부입니다:</p>
+<table>
+<tr><th>07 (파이썬)</th><th>08 (CHOP)</th></tr>
+<tr><td class="k">d3() 거리 계산</td><td><span class="chip chop">Math</span> Combine CHOPs: <b>Subtract</b> → <span class="chip chop">Math</span> Combine Channels: <b>Length</b> <span class="muted">— 피타고라스 √(x²+y²+z²)가 메뉴에 있다!</span></td></tr>
+<tr><td class="k">ratio = d_tip / d_pip</td><td><span class="chip chop">Math</span> Combine CHOPs: <b>Divide</b></td></tr>
+<tr><td class="k">(ratio-0.95)/(1.25-0.95)</td><td><span class="chip chop">Math</span> Range 0.95~1.25 → 0~1</td></tr>
+<tr><td class="k">max(0, min(1, …)) 클램프</td><td><span class="chip chop">Limit</span> Clamp 0~1 <span class="muted">— Math Range는 클램프를 안 함</span></td></tr>
+<tr><td class="k">if n==0 / n==4 / 검지+중지</td><td><b>곱셈 3개</b> — 아래 "퍼지 AND" 참고</td></tr>
+<tr><td class="k">× active 게이트</td><td>active를 <b>곱셈의 한 항으로</b> Merge에 끼움</td></tr>
+</table>
+<div class="why"><b>트레이드오프.</b> Script 30줄 ↔ CHOP 50노드. 노드 버전은 <b>모든 중간값이 뷰어로 보이고</b>(디버깅 천국) 코드를 몰라도 읽힙니다. 스크립트 버전은 압축적이고 규칙 바꾸기가 빠릅니다. 같은 수학, 다른 표현 — 둘 다 할 줄 알면 상황 따라 고르면 됩니다.</div>
+
+<h2><span class="no">B</span>손가락 블록 — 하나 만들고 3번 복붙</h2>
+<div class="td-panel">
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">xyz</span></div><span class="opname">sel_tip_index</span><span class="krname">손끝 3채널</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">−wrist</span></div><span class="opname">sub_tip_index</span><span class="krname">손목 빼기</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">√ΣΔ²</span></div><span class="opname">len_tip_index</span><span class="krname">피타고라스</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">÷</span></div><span class="opname">ratio_index</span><span class="krname">tip÷pip</span></div>
+  </div>
+  <p class="annot">같은 3노드가 pip에도 (sub_pip → len_pip) — ratio의 2번 입력으로. sel_wrist는 4개 블록이 공유.</p>
+</div>
+<table>
+<tr><th>노드</th><th>설정</th><th>왜</th></tr>
+<tr><td class="k">sel_tip_index</td><td>CHOPs <code>../hand_tracking2/normalized_data</code> · <code>h1:index_finger_tip:*</code></td><td>손끝 x·y·z 3채널</td></tr>
+<tr><td class="k">sub_tip_index</td><td>2입력 Math · Combine CHOPs = <b>Subtract</b> · Match by <b>Index</b></td><td>채널명이 달라서 순서로 매칭 — (tip-wrist) 벡터</td></tr>
+<tr><td class="k">len_tip_index</td><td>Math · Combine Channels = <b>Length</b></td><td>3채널 → 1채널 3D 거리. 제곱·합·루트가 이 메뉴 하나</td></tr>
+<tr><td class="k">ratio_index</td><td>2입력 Math · Combine CHOPs = <b>Divide</b> · Rename <code>*</code>→<code>index</code></td><td>회전 불변 비율. 채널명 = 손가락 이름</td></tr>
+</table>
+<p>4개 블록의 ratio를 <span class="chip chop">Merge</span>로 합치고 → <span class="chip chop">Math</span>(Range 0.95~1.25→0~1) → <span class="chip chop">Limit</span>(Clamp 0~1) → <span class="chip chop">Lag</span>(0.1) → <code>null_fingers</code>. 척추 완성 — 채널 4개: <code>index middle ring pinky</code> = 펴짐 0~1.</p>
+
+<h2><span class="no">C</span>판정 — 퍼지 AND는 곱셈이다</h2>
+<p>"전부 굽었나?" 같은 조건문이 없어도 됩니다. <strong>0~1 값들의 AND는 곱셈</strong>이니까:</p>
+<pre>바위 = (1-검지) × (1-중지) × (1-약지) × (1-새끼) × active
+보   =   검지  ×   중지  ×   약지  ×   새끼  × active
+가위 =   검지  ×   중지  × (1-약지) × (1-새끼) × active
+
+<span class="c">전부 1에 가까울 때만 곱이 1에 가깝다 = AND</span>
+<span class="c">(1-x)는 NOT. active를 곱하면 손 없을 때 전부 0 = 게이트 공짜</span></pre>
+<table>
+<tr><th>노드</th><th>구성</th></tr>
+<tr><td class="k">inv_fingers</td><td>Math Range 0~1 → <b>1~0</b> = 뒤집기(NOT). null_fingers에 연결</td></tr>
+<tr><td class="k">merge_rock → mul_rock</td><td>Merge(inv_fingers 4ch + sel_active 1ch) → Math Combine Channels = <b>Multiply</b> → rename <code>rock</code></td></tr>
+<tr><td class="k">merge_paper → mul_paper</td><td>Merge(null_fingers + active) → Multiply → <code>paper</code></td></tr>
+<tr><td class="k">merge_scissors → mul_scissors</td><td>Merge(검지·중지는 null_fingers에서, 약지·새끼는 inv_fingers에서 Select + active) → Multiply → <code>scissors</code></td></tr>
+</table>
+<p>셋을 Merge → <code>null_rps</code>. 판정 텍스트는 06·07과 같은 Text TOP — 문턱만 <strong>0.4</strong>로 (곱셈 점수는 확률보다 겸손하게 나오니까).</p>
+<div class="why"><b>이 패턴 어디서 봤지?</b> 05_Pinch의 Logic(스위치)이 하던 일을 곱셈이 부드럽게 대신합니다. Logic은 딱딱한 0/1, 곱은 <b>연속적인 확신</b> — 미터가 부드럽게 반응하는 이유.</div>
+
+<h2><span class="no">D</span>조절 노브</h2>
+<table>
+<tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
+<tr><td>캘리브레이션 (07의 R_CURL/R_OPEN)</td><td class="k">math_norm · From Range</td><td>주먹에서 미터 완전히 꺼지고 보자기에서 꽉 차게 (0.9~1.3 사이 조정)</td></tr>
+<tr><td>판정 민감도</td><td class="k">text 익스프레션의 0.4</td><td>깐깐하게 0.6 · 후하게 0.25</td></tr>
+<tr><td>반응 속도</td><td class="k">lag_fingers</td><td>0.05~0.2</td></tr>
+</table>
+
+<h2><span class="no">E</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>중간값을 봐라 — 이 버전의 특권</strong> — len_tip_index(거리), ratio_index(비율), null_fingers(펴짐), null_rps(판정) 뷰어를 차례로 열면 어디서 죽었는지 바로 보입니다. Script 버전은 이게 안 됨.</li>
+<li><strong>Subtract가 이상해요</strong> — 2입력 Math의 Match by가 <b>Index</b>인지 확인 (채널명이 달라 Name 매칭은 실패).</li>
+<li><strong>비율이 0이에요</strong> — 손이 없으면 좌표가 전부 0 → 거리 0. 정상입니다 (active 게이트가 판정을 막아줌).</li>
+<li><strong>바위만 계속 떠요</strong> — math_norm From Range 1(0.95)을 올려보세요. 손가락이 "덜 굽음"으로 새는 중.</li>
+</ul>
+
+<h2><span class="no">F</span>더 가보기</h2>
+<ul class="plain">
+<li><strong>07 vs 08 나란히</strong> — 같은 손, 두 심판. 판정이 갈리는 순간을 찾아보세요 (거의 없을 겁니다 — 같은 수학이니까. 그게 포인트).</li>
+<li><strong>Trail CHOP 디버깅</strong> — ratio 채널에 Trail을 붙이면 시간 그래프로 보임. 문턱을 어디 둘지 눈으로 정할 수 있습니다.</li>
+<li><strong>가중치 판정</strong> — 곱 대신 Math Combine Channels = Average로 바꾸면 "다수결" 성격으로 — AND와 평균의 차이를 몸으로.</li>
+<li><strong>새 제스처</strong> — 곱셈 조합만 바꾸면 됩니다: 검지만 = 포인팅, 검지+새끼 = 🤘 록사인.</li>
+</ul>
+
+<div class="pagenav"><a href="week2_07_rpsgeo.html">← 07_RPS_Geo<span class="sub">기하학 가위바위보 — 회전 불변</span></a><span></span></div>
+</div>
+</body>
+</html>
