@@ -2,6 +2,7 @@
 
 TouchDesigner 인터랙티브 아트 워크숍 자료입니다.
 **모든 자료 한눈에: https://gamsasyo.github.io/STB_InteractiveMapping/Slide/**
+**📦 전체 자료 한 번에: [Download ZIP](https://github.com/gamsasyo/STB_InteractiveMapping/archive/refs/heads/main.zip)**
 
 ## 2주차 (7/16) — MediaPipe 인터랙션
 
