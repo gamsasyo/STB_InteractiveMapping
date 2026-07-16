@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수퍼 테스트베드 LAB — 수업 자료</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --ink: #141414; --gray: #8d8d8d; --faint: #ececec; --accent: #e8820c;
+    --chop: #8fbf6f; --top: #a88bd4;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --sans: -apple-system, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", sans-serif;
+  }
+  body { background: #fff; color: var(--ink); font-family: var(--sans); line-height: 1.6; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 8vh 24px 12vh; }
+  h1 { font-family: var(--mono); font-size: clamp(26px, 4.5vw, 42px); letter-spacing: -0.02em; }
+  .sub { color: var(--gray); margin: 10px 0 5vh; font-size: clamp(15px, 1.8vw, 18px); }
+  .week {
+    border: 1.5px solid var(--faint); border-radius: 14px;
+    padding: 26px 28px; margin-bottom: 22px;
+  }
+  .week.now { border-color: var(--accent); background: #fdf3e7; }
+  .week h2 { font-size: clamp(19px, 2.4vw, 25px); font-weight: 800; margin-bottom: 4px; }
+  .week h2 .date { font-family: var(--mono); font-size: .72em; color: var(--gray); font-weight: 400; margin-left: 8px; }
+  .week .desc { color: #555; font-size: clamp(14px, 1.7vw, 16.5px); margin-bottom: 14px; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .links a {
+    display: inline-block; text-decoration: none;
+    font-family: var(--mono); font-size: 13.5px; font-weight: 700;
+    color: var(--ink); background: #fff; border: 1.5px solid var(--faint);
+    border-radius: 8px; padding: 8px 14px;
+  }
+  .links a:hover { border-color: var(--accent); color: var(--accent); }
+  .links a.main { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .links a.main:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .links .lbl { font-family: var(--mono); font-size: 12px; color: var(--gray); align-self: center; margin-right: 2px; }
+  .soon { color: var(--gray); font-family: var(--mono); font-size: 13px; }
+  .foot { margin-top: 6vh; color: var(--gray); font-size: 13.5px; font-family: var(--mono); }
+  .foot a { color: var(--gray); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>수퍼 테스트베드 <span style="color:var(--accent)">인터랙티브 매핑 LAB</span></h1>
+  <p class="sub">TouchDesigner 수업 자료 — 슬라이드 · 빌드 가이드 · TD 완성본 · 테크멘토 신재영</p>
+
+  <div class="week now">
+    <h2>2주차 — MediaPipe 인터랙션 <span class="date">7/16</span></h2>
+    <p class="desc">웹캠이 몸 컨트롤러가 된다 — 손 21 랜드마크 · 정규화 · 파티클·사운드 매핑 · 포즈 · 가위바위보 3부작</p>
+    <div class="links">
+      <a class="main" href="week2.html">📺 슬라이드</a>
+      <a href="../TD/week2.toe">🎛 TD 완성본 week2.toe</a>
+      <span class="lbl">가이드:</span>
+      <a href="week2.html#g01">01_Hand</a>
+      <a href="week2.html#g02">02_Theremin</a>
+      <a href="week2.html#g03">03_Pose</a>
+      <a href="week2.html#g04">04_TwoHands</a>
+      <a href="week2.html#g05">05_Pinch</a>
+      <a href="week2.html#g06">06_RPS</a>
+      <a href="week2.html#g07">07_RPS_Chop</a>
+      <a href="week2.html#g08">08_RPS_Script</a>
+    </div>
+  </div>
+
+  <div class="week">
+    <h2>1주차 — TouchDesigner Basics <span class="date">7/9</span></h2>
+    <p class="desc">노드 · 와이어 · CHOP · Referencing — 웹캠 이펙트 · 잔상 · 마우스/오디오 인터랙션</p>
+    <div class="links">
+      <a class="main" href="week1.html">📺 슬라이드</a>
+      <a href="../TD/week1.toe">🎛 TD 완성본 week1.toe</a>
+    </div>
+  </div>
+
+  <div class="week">
+    <h2>3주차 — 아두이노 시리얼 <span class="date">7/23 예정</span></h2>
+    <p class="desc">물리 세계의 센서가 CHOP이 되는 날 — 거리 · 기울기 · 노브. 프로젝트 소개 + 멘토링 ①</p>
+    <div class="links"><span class="soon">수업 후 공개</span></div>
+  </div>
+
+  <p class="foot">
+    도구: <a href="https://derivative.ca/download">TouchDesigner (무료 Non-Commercial)</a> ·
+    <a href="https://github.com/torinmb/mediapipe-touchdesigner">MediaPipe TD Plugin</a> ·
+    <a href="https://www.arduino.cc/en/software">Arduino IDE</a><br>
+    week2.toe는 <a href="https://github.com/torinmb/mediapipe-touchdesigner/releases">MediaPipe TD Plugin</a>과 함께 실행하세요 (경량판) ·
+    저장소: <a href="https://github.com/gamsasyo/STB_InteractiveMapping">github.com/gamsasyo/STB_InteractiveMapping</a>
+  </p>
+</div>
+</body>
+</html>
