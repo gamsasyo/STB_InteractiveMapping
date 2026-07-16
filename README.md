@@ -30,12 +30,24 @@ TouchDesigner 인터랙티브 아트 워크숍 자료입니다.
 | 자료 | 링크 |
 |---|---|
 | 📺 슬라이드 (웹) | [week1.html](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week1.html) |
-| 📄 01_Basics 강의 PDF | 수업 참가자에게 별도 공유 |
+| 📄 01_Basics 강의 PDF | [Basic/01_Basics.pdf](Basic/01_Basics.pdf) |
 | 🎛 TD 완성본 파일 | [TD/week1.zip](TD/week1.zip) — 압축 해제 후 .toe 실행. `01_Basic` · `02_Webcam` · `03_Audio` · `04_WaterMirror` |
 
 ## 3주차 (7/23) — 아두이노 시리얼 *(예정)*
 
 물리 세계의 센서가 CHOP이 되는 날. 자료는 수업 후 공개됩니다.
+
+## 📚 TD 기초 자료실 — [`Basic/`](Basic)
+
+더 파고들 분들을 위한 기초 강의 PDF 시리즈 + 연습용 TD 파일:
+
+| 자료 | 내용 |
+|---|---|
+| [01_Basics.pdf](Basic/01_Basics.pdf) | TD 기초 — 오퍼레이터 · 와이어 · Referencing (1주차 교재) |
+| [02_Feedback.pdf](Basic/02_Feedback.pdf) | 피드백 — 잔상 · 루프 구조 |
+| [03_Sop.pdf](Basic/03_Sop.pdf) | SOP — 3D 지오메트리 기초 |
+| [04_Particle.pdf](Basic/04_Particle.pdf) | 파티클 시스템 |
+| [TD_Basic.zip](Basic/TD_Basic.zip) | 기초 연습용 TD 파일 (압축 해제 후 실행) |
 
 ---
 
