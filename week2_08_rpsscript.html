@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>07_RPS_Geo — 기하학 가위바위보 — 회전 불변 · 수퍼 테스트베드 LAB 2주차</title>
+<title>08_RPS_Script — 같은 수학을 파이썬 30줄로 · 수퍼 테스트베드 LAB 2주차</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
@@ -103,60 +103,28 @@
 </style>
 </head>
 <body>
-<nav class="topnav"><a class="back" href="week2.html">← 2주차 슬라이드</a><a href="week2_01_hand.html">01_Hand</a><a href="week2_02_theremin.html">02_Theremin</a><a href="week2_03_pose.html">03_Pose</a><a href="week2_04_twohands.html">04_TwoHands</a><a href="week2_05_pinch.html">05_Pinch</a><a href="week2_06_rps.html">06_RPS</a><a class="on" href="week2_07_rpsgeo.html">07_RPS_Geo</a><a href="week2_08_rpschop.html">08_RPS_Chop</a></nav>
+<nav class="topnav"><a class="back" href="week2.html">← 2주차 슬라이드</a><a href="week2_01_hand.html">01_Hand</a><a href="week2_02_theremin.html">02_Theremin</a><a href="week2_03_pose.html">03_Pose</a><a href="week2_04_twohands.html">04_TwoHands</a><a href="week2_05_pinch.html">05_Pinch</a><a href="week2_06_rps.html">06_RPS</a><a href="week2_07_rpschop.html">07_RPS_Chop</a><a class="on" href="week2_08_rpsscript.html">08_RPS_Script</a></nav>
 <div class="wrap">
-<div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>07_RPS_Geo</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/07_RPS_Geo</b></div>
+<div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>08_RPS_Script</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/08_RPS_Script</b></div>
 
-<h1>07_RPS_Geo</h1>
-<p class="lead">06의 제스처 모델은 <strong>브이를 수직으로 세워야만</strong> 가위로 인식합니다. 이번엔 <strong>관절 xyz 좌표로 직접 기하학을 계산</strong> — 손을 어느 방향으로 돌려도, 가위를 눕혀도 잡아내는 심판.</p>
-<div class="meta"><span>심화 — 06의 업그레이드</span><span>새 개념: Script CHOP · 회전 불변량</span><span>파이썬 30줄</span><span>난이도 ●●●+</span></div>
+<h1>08_RPS_Script</h1>
+<p class="lead">07과 <strong>완전히 같은 수학</strong>을 — 노드 50개 대신 <strong>파이썬 30줄</strong>로. Script CHOP이라는 문을 여는 베이스.</p>
+<div class="meta"><span>07의 코드 번역판</span><span>새 개념: Script CHOP</span><span>파이썬 30줄</span><span>난이도 ●●●+</span></div>
 
-<h2><span class="no">A</span>왜 06으로는 안 되나 — 블랙박스 vs 화이트박스</h2>
+<h2><span class="no">A</span>CHOP → Script 번역표</h2>
+<p>07에서 만든 노드들이 코드 몇 줄이 되는지 — 방향만 뒤집으면 같은 표입니다:</p>
 <table>
-<tr><th></th><th>06_RPS (제스처 모델)</th><th>07_RPS_Geo (관절 기하학)</th></tr>
-<tr><td class="k">재료</td><td>학습된 분류기의 확률</td><td>21개 관절의 원시 xyz</td></tr>
-<tr><td class="k">방향</td><td>학습 데이터 방향대로만 (브이는 수직!)</td><td><strong class="accent">회전 무관</strong> — 눕힌 가위도 OK</td></tr>
-<tr><td class="k">고칠 수 있나</td><td>블랙박스 — 문턱값 정도만</td><td>화이트박스 — 규칙을 내가 정함</td></tr>
-<tr><td class="k">새 제스처</td><td>학습된 8종뿐</td><td>기하학으로 뭐든 정의 가능</td></tr>
+<tr><th>07 (CHOP)</th><th>08 (파이썬)</th></tr>
+<tr><td class="k">Sub → Length (블록 ×4)</td><td><code>d3()</code> 함수 하나 — 4번 재사용</td></tr>
+<tr><td class="k">Divide</td><td><code>ratio = d_tip / d_pip</code></td></tr>
+<tr><td class="k">Math Range + Limit</td><td><code>max(0, min(1, (ratio-0.95)/(1.25-0.95)))</code></td></tr>
+<tr><td class="k">Logic 이진화 + 곱셈 3개</td><td><code>up = [...]; n = len(up)</code> + if 세 줄</td></tr>
+<tr><td class="k">active Merge 게이트</td><td><code>× active</code> 한 항</td></tr>
 </table>
-<div class="why"><b>왜 모델은 방향을 타나?</b> 분류기는 학습 사진들의 분포를 외운 것 — 세상 사람들이 브이를 대부분 세워서 찍으니, 눕힌 브이는 본 적이 없는 낯선 데이터가 됩니다. 기하학은 외우지 않고 <b>계산</b>하니까 이 문제가 없습니다.</div>
+<div class="why"><b>트레이드오프.</b> CHOP 버전은 모든 중간값이 뷰어로 보이고 코드를 몰라도 읽힙니다. Script 버전은 압축적이고 <b>규칙 바꾸기가 빠릅니다</b> — "검지+새끼 = 🤘" 같은 새 제스처가 한 줄. 같은 수학, 다른 표현 — 상황 따라 고르세요.</div>
 
-<h2><span class="no">B</span>핵심 아이디어: 회전 불변량</h2>
-<p>"손가락이 펴졌다"를 방향 없이 정의하려면? <strong>손끝이 손목에서 얼마나 멀어졌는지</strong>를 보면 됩니다:</p>
-<pre>  펴진 손가락              굽힌 손가락
-      ● tip                   ● pip
-      │                      ╱ ● tip  <span class="c">← 접혀서 손목 쪽으로</span>
-      ● pip                 │
-      │                     │
-  ────●──── wrist       ────●──── wrist
-
-  ratio = dist(tip, wrist) / dist(pip, wrist)
-  펴짐: ratio ≈ 1.25+     굽힘: ratio ≈ 0.95-
-  <span class="o">★ 손을 어떻게 돌려도 두 거리는 같이 돌아간다 → 비율은 불변</span></pre>
-<div class="why"><b>왜 절대거리가 아니라 비율?</b> 절대거리는 손 크기·카메라와의 거리에 오염됩니다. 비율은 그 오염이 분모·분자에서 상쇄 — <b>정규화의 기하학 버전.</b> 그리고 z까지 3D로 계산해서 손가락이 카메라 쪽으로 접혀도 잡아냅니다.</div>
-<p>판정 규칙은 펴진 손가락 <strong>개수</strong>(엄지 제외 4개 중):</p>
-<table>
-<tr><th>펴진 손가락</th><th>판정</th></tr>
-<tr><td class="k">0개</td><td>✊ 바위</td></tr>
-<tr><td class="k">딱 2개 = 검지+중지</td><td>✌ 가위 <span class="muted">(중지+약지 2개는 가위 아님)</span></td></tr>
-<tr><td class="k">4개</td><td>✋ 보</td></tr>
-<tr><td class="k">그 외 (1·3개, 애매)</td><td>. . . 판정 보류</td></tr>
-</table>
-
-<h2><span class="no">B'</span>단계별 빌드</h2>
-
-<div class="bstep"><div class="sn">01</div><div>
-<h3><span class="chip chop">Select × 2</span>원시 재료</h3>
-<table>
-<tr><th>노드</th><th>설정</th></tr>
-<tr><td class="k">select_h1</td><td>CHOPs <code>../hand_tracking2/normalized_data</code> · Channel Names <code>h1:*</code> — 관절 xyz 전부</td></tr>
-<tr><td class="k">select_active</td><td>CHOPs <code>../hand_tracking2/helpers</code> · <code>h1:hand_active</code> — 손 없을 때 0 게이트</td></tr>
-</table>
-</div></div>
-
-<div class="bstep"><div class="sn">02</div><div>
-<h3><span class="chip chop">Script CHOP</span>script_fingers — ★새 개념: 파이썬으로 만드는 CHOP</h3>
-<p>Script CHOP은 <strong>매 프레임 파이썬 함수(onCook)를 실행해 채널을 직접 만드는</strong> 오퍼레이터입니다. 1번 입력에 select_h1, 2번 입력에 select_active를 와이어. 코드 전문:</p>
+<h2><span class="no">B</span>Script CHOP — 파이썬으로 만드는 CHOP</h2>
+<p>Script CHOP은 <strong>매 프레임 onCook 함수를 실행해 채널을 직접 만드는</strong> 오퍼레이터입니다. 1번 입력에 관절 좌표(select h1:*), 2번 입력에 hand_active를 와이어. 코드는 도킹된 <code>script_fingers_callbacks</code> DAT에:</p>
 <pre>import math
 
 TIP = {'index': 'index_finger_tip', 'middle': 'middle_finger_tip',
@@ -167,7 +135,7 @@ PIP = {'index': 'index_finger_pip', 'middle': 'middle_finger_pip',
 R_CURL, R_OPEN = 0.95, 1.25   <span class="c"># 굽힘/펴짐 경계 — 캘리브레이션 노브</span>
 
 def d3(src, a, b):
-    <span class="c"># 두 랜드마크 사이 3D 거리 (x·y·z 전부)</span>
+    <span class="c"># 두 랜드마크 사이 3D 거리 — 07의 Sub→Length 두 노드가 이 세 줄</span>
     return math.sqrt(sum(
         (src['h1:%s:%s' % (a, ax)][0] - src['h1:%s:%s' % (b, ax)][0]) ** 2
         for ax in 'xyz'))
@@ -178,16 +146,15 @@ def onCook(scriptOp):
     active = scriptOp.inputs[1]['h1:hand_active'][0]
 
     ext = {}
-    for f in TIP:                                  <span class="c"># 손가락 4개 각각</span>
+    for f in TIP:                                  <span class="c"># 07의 블록 복붙 ×4 = for 루프</span>
         d_tip = d3(src, TIP[f], 'wrist')
         d_pip = d3(src, PIP[f], 'wrist')
         ratio = d_tip / d_pip if d_pip > 1e-6 else 0.0
-        <span class="c"># 비율 → 0~1 "펴짐 정도" (같은 척추: 정규화!)</span>
         ext[f] = max(0.0, min(1.0, (ratio - R_CURL) / (R_OPEN - R_CURL))) * active
 
-    up = [f for f in ext if ext[f] > 0.5]          <span class="c"># 펴진 손가락 목록</span>
+    up = [f for f in ext if ext[f] > 0.5]          <span class="c"># 07의 Logic 이진화</span>
     n = len(up)
-    rock     = active if n == 0 else 0.0
+    rock     = active if n == 0 else 0.0           <span class="c"># 07의 곱셈 3개 = if 세 줄</span>
     paper    = active if n == 4 else 0.0
     scissors = active if (n == 2 and 'index' in up and 'middle' in up) else 0.0
 
@@ -195,46 +162,32 @@ def onCook(scriptOp):
             ('rock', rock), ('paper', paper), ('scissors', scissors)]:
         c = scriptOp.appendChan(name)              <span class="c"># 채널을 직접 만든다</span>
         c.vals = [val]</pre>
-<div class="why"><b>읽는 순서.</b> ① d3 = 피타고라스 3D 거리 ② 손가락마다 tip/pip 비율 ③ 비율을 0~1로 정규화 (Math CHOP이 하던 일을 코드로) ④ 0.5 넘는 손가락 세기 ⑤ 개수로 판정 ⑥ appendChan으로 채널 출력. <b>hand_active를 곱해</b> 손이 없으면 전부 0 — 06에서 배운 게이트 패턴.</div>
-</div></div>
+<p>출력 → Lag(0.1) → <code>null_geo</code> → 07과 같은 손가락 미터 + 판정 텍스트.</p>
 
-<div class="bstep"><div class="sn">03</div><div>
-<h3><span class="chip chop">Lag → Null</span> + <span class="chip top">미터·판정</span>06과 같은 마무리</h3>
-<ul class="plain">
-<li><code>lag_smooth</code>(0.1) → <code>null_geo</code> — 출력 채널: <code>index middle ring pinky count rock paper scissors</code></li>
-<li><strong>손가락 미터 4개</strong> — Circle TOP, radius <code>0.02 + op('null_geo')['index'] * 0.09</code> 식. 왼쪽부터 검지·중지·약지·새끼. 손가락을 하나씩 펴보세요 — 하나씩 켜집니다.</li>
-<li><strong>판정 텍스트</strong> — 06과 같은 Text TOP 패턴, 소스만 null_geo의 rock/paper/scissors로.</li>
-<li>Add ×3 + Over → <code>null_out</code>. 완성!</li>
-</ul>
-</div></div>
-
-<h2><span class="no">C</span>조절 노브 (캘리브레이션)</h2>
+<h2><span class="no">C</span>조절 노브</h2>
 <table>
 <tr><th>증상</th><th>어디를</th><th>어떻게</th></tr>
-<tr><td>주먹인데 바위가 안 됨 (손가락이 덜 접힌 걸로 나옴)</td><td class="k">R_CURL 0.95</td><td>올리기 (1.0) — 굽힘 판정 후하게</td></tr>
+<tr><td>주먹인데 바위가 안 됨</td><td class="k">R_CURL 0.95</td><td>올리기 (1.0)</td></tr>
 <tr><td>펴도 미터가 덜 참</td><td class="k">R_OPEN 1.25</td><td>내리기 (1.15)</td></tr>
-<tr><td>판정이 깜빡임</td><td class="k">lag_smooth</td><td>0.15로</td></tr>
+<tr><td>판정 깜빡임</td><td class="k">lag_smooth</td><td>0.15로</td></tr>
 </table>
-<p class="muted">먼저 미터 4개를 보면서 주먹/보자기를 쥐어보세요 — 미터가 완전히 꺼지고 완전히 차도록 R_CURL·R_OPEN을 맞추는 것이 캘리브레이션의 전부입니다.</p>
 
 <h2><span class="no">D</span>안 될 때</h2>
 <ul class="plain">
-<li><strong>가위가 옆으로 눕히면 안 돼요</strong> — 그게 됐으면 이 베이스를 만들 이유가… 06을 보고 있는 건 아닌지 확인 ㅎㅎ 07은 방향 무관입니다.</li>
-<li><strong>코드를 고쳤는데 반응이 없어요</strong> — Script CHOP의 콜백 DAT(<code>script_fingers_callbacks</code>)을 고쳐야 합니다. 저장하면 즉시 반영.</li>
+<li><strong>코드를 고쳤는데 반응이 없어요</strong> — Script CHOP 본체가 아니라 <b>콜백 DAT</b>(<code>…_callbacks</code>)를 고쳐야 합니다. 저장하면 즉시 반영.</li>
 <li><strong>에러가 났어요</strong> — Script CHOP이 빨간색이면 텍스트포트(Alt+T)에 파이썬 에러가 찍힙니다. 대부분 오타.</li>
-<li><strong>새끼손가락 미터가 늘 애매해요</strong> — 새끼는 pip-wrist 거리가 짧아 비율 변화폭이 작습니다. 새끼만 경계를 따로 주는 것도 방법 (dict로 R_CURL을 손가락별로).</li>
+<li><strong>어디서 죽었는지 모르겠어요</strong> — 이럴 땐 07이 그리워지는 순간. 중간값 디버깅은 CHOP 버전이 압도적으로 편합니다.</li>
 </ul>
 
-<h2><span class="no">E</span>더 가보기 — 이제 제스처를 발명할 수 있다</h2>
+<h2><span class="no">E</span>더 가보기 — 코드라서 쉬운 것들</h2>
 <ul class="plain">
-<li><strong>🤙 샤카</strong> — 엄지+새끼만 폄. 엄지는 tip↔pinky_mcp 거리 같은 다른 불변량이 필요 — 직접 설계해보세요.</li>
-<li><strong>숫자 세기</strong> — count 채널이 이미 있음(0~4). 손가락 개수로 씬 전환.</li>
-<li><strong>핀치 강도</strong> — d3(thumb_tip, index_finger_tip)를 손 크기(wrist↔middle_mcp)로 나누면 거리 무관 핀치 — 05_Pinch의 업그레이드.</li>
-<li><strong>06 vs 07 대결</strong> — 두 심판을 나란히 띄우고 손을 돌려가며 어디서 갈리는지 관찰 — 모델과 기하학의 차이를 몸으로 이해하게 됩니다.</li>
-<li><strong>2인 대결</strong> — 06 가이드의 확장과 동일: h2 채널로 복제.</li>
+<li><strong>🤙 샤카</strong> — <code>shaka = active if (n==1 and 'pinky' in up) else 0</code>… 엄지 불변량은 직접 설계해보세요.</li>
+<li><strong>숫자 세기</strong> — count 채널(0~4)로 씬 전환.</li>
+<li><strong>핀치 강도</strong> — <code>d3(thumb_tip, index_finger_tip)</code>을 손 크기로 나누면 거리 무관 핀치 — 05의 업그레이드.</li>
+<li><strong>2인 대결</strong> — 06 가이드의 확장과 동일: h2 채널로 복제해 승패 로직까지.</li>
 </ul>
 
-<div class="pagenav"><a href="week2_06_rps.html">← 06_RPS<span class="sub">가위바위보 심판</span></a><a href="week2_08_rpschop.html" style="text-align:right;">08_RPS_Chop →<span class="sub">CHOP 온리 가위바위보</span></a></div>
+<div class="pagenav"><a href="week2_07_rpschop.html">← 07_RPS_Chop<span class="sub">순수 CHOP 가위바위보 — 회전 불변</span></a><span></span></div>
 </div>
 </body>
 </html>

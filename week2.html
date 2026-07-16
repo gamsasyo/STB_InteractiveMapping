@@ -680,7 +680,107 @@
           <p>"악기를 들지 않고 소리와 빛을 동시에 연주하기" — 손·몸·얼굴 아무거나. 17:45 미니 공유에서 시연.</p>
         </div>
       </div>
-      <p class="muted" style="margin-top: 2.6vh;">완성본·가이드: 미션1 = <a href="week2_04_twohands.html" target="_blank">04_TwoHands ↗</a> · 미션2 = <a href="week2_05_pinch.html" target="_blank">05_Pinch ↗</a> · <strong class="accent">최종 미션</strong> = <a href="week2_06_rps.html" target="_blank">06_RPS 가위바위보 ↗</a> · 심화 = <a href="week2_07_rpsgeo.html" target="_blank">07 회전불변 기하학(Script) ↗</a> · <a href="week2_08_rpschop.html" target="_blank">08 CHOP 온리 버전 ↗</a>. 미션 2까지 완료한 분은 주변에 막힌 분을 도와주세요 — 가르치는 것이 가장 빨리 배우는 방법입니다.</p>
+      <p class="muted" style="margin-top: 2.6vh;">완성본·가이드: 미션1 = <a href="week2_04_twohands.html" target="_blank">04_TwoHands ↗</a> · 미션2 = <a href="week2_05_pinch.html" target="_blank">05_Pinch ↗</a> · <strong class="accent">최종 미션</strong> = 가위바위보 3부작 — <a href="week2_06_rps.html" target="_blank">06 모델 ↗</a> · <a href="week2_07_rpschop.html" target="_blank">07 순수 CHOP ↗</a> · <a href="week2_08_rpsscript.html" target="_blank">08 Script ↗</a> (다음 챕터에서 차근차근). 미션 2까지 완료한 분은 주변에 막힌 분을 도와주세요 — 가르치는 것이 가장 빨리 배우는 방법입니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- RPS-1. 최종 미션 3부작 -->
+  <section class="slide">
+    <div class="slide-label">RPS <span class="sub">— 최종 미션: 가위바위보 심판, 세 가지 방법</span></div>
+    <div class="body">
+      <p style="margin-bottom: 2.5vh;">같은 문제를 세 번 다르게 풉니다 — <strong>도구가 사고를 어떻게 바꾸는지</strong> 몸으로 느끼는 미션.</p>
+      <table>
+        <tr><th>베이스</th><th>재료</th><th>성격</th><th>특징</th></tr>
+        <tr><td><span class="chip chop">06_RPS</span></td><td>학습된 제스처 확률</td><td>블랙박스 — 외운 것</td><td class="muted">브이를 수직으로 세워야만 가위</td></tr>
+        <tr><td><span class="chip chop">07_RPS_Chop</span></td><td>관절 xyz + CHOP 수학</td><td class="today">★ 화이트박스 — 계산</td><td>어느 방향이든 OK · 중간값이 다 보임</td></tr>
+        <tr><td><span class="chip chop">08_RPS_Script</span></td><td>같은 수학, 파이썬 30줄</td><td>화이트박스 — 압축</td><td class="muted">규칙 바꾸기 빠름 · 제스처 발명</td></tr>
+      </table>
+      <p style="margin-top: 3vh;">06이 눕힌 가위를 못 보는 이유: 분류기는 학습 사진을 <strong>외웠고</strong>, 사람들은 브이를 세워 찍으니까. <strong class="accent">외우지 않고 계산하면 방향이 사라집니다</strong> — 다음 장.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- RPS-2. 회전 불변량 -->
+  <section class="slide">
+    <div class="slide-label">RPS <span class="sub">— 07 순수 CHOP ① 회전 불변량: "펴짐"을 방향 없이 정의하기</span></div>
+    <div class="body">
+      <div class="td-panel">
+        <pre style="font-family: var(--mono); color: #cfcfd6; font-size: clamp(13px, 1.5vw, 22px); line-height: 1.65; background: none; margin: 0;">  펴진 손가락               굽힌 손가락
+      ● tip                    ● pip
+      │                       ╱ ● tip   <span style="color:#7a7a82;">← 접혀서 손목 쪽으로</span>
+      ● pip                  │
+  ────●──── wrist        ────●──── wrist
+
+  ratio = dist(tip, wrist) ÷ dist(pip, wrist)
+  <span style="color:#e8820c;">펴짐: ratio ≈ 1.25+       굽힘: ratio ≈ 0.95-</span></pre>
+        <p class="annot" style="margin-top: 3vh;">★ 손을 어떻게 돌려도 두 거리는 같이 돌아간다 ──▶ 비율은 불변 (회전 불변량)</p>
+      </div>
+      <p style="margin-top: 3vh;">왜 <strong>비율</strong>인가? 절대거리는 손 크기·카메라 거리에 오염되지만, 비율은 분모·분자에서 상쇄 — <strong class="accent">정규화의 기하학 버전.</strong> z까지 3D로 재면 카메라 쪽으로 접힌 손가락도 잡힙니다.</p>
+      <p class="muted" style="margin-top: 1.5vh;">판정은 펴진 손가락 개수: 0개 = 바위 · 딱 검지+중지 = 가위 · 4개 = 보.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- RPS-3. 손가락 블록 -->
+  <section class="slide">
+    <div class="slide-label">RPS <span class="sub">— 07 순수 CHOP ② 손가락 블록: 왜 이 노드들인가</span></div>
+    <div class="body">
+      <div class="roadmap">
+        <div class="step">
+          <span class="n">01</span><span class="op chop">Select ×2</span>
+          <span class="desc"><code>h1:index_finger_tip:*</code> · <code>h1:wrist:*</code> — 점 하나 = xyz 3채널짜리 <strong>벡터</strong></span><span class="tag">벡터로 시작</span>
+        </div>
+        <div class="step">
+          <span class="n">02</span><span class="op chop">Math: Subtract</span>
+          <span class="desc">2입력, Match by <strong>Index</strong> — 손목 기준 <strong>상대 벡터</strong> (채널명 달라서 순서 매칭)</span><span class="tag">기준점 옮기기</span>
+        </div>
+        <div class="step hot">
+          <span class="n">03</span><span class="op chop">Math: Length</span>
+          <span class="desc">Combine Channels = Length — <strong>√(x²+y²+z²) 피타고라스가 메뉴 하나</strong></span><span class="tag">★ 3D 거리</span>
+        </div>
+        <div class="step hot">
+          <span class="n">04</span><span class="op chop">Math: Divide</span>
+          <span class="desc">tip거리 ÷ pip거리 — <strong>비율 = 회전·크기 불변</strong>. Rename으로 채널명 = 손가락 이름</span><span class="tag">★ 불변량</span>
+        </div>
+        <div class="step">
+          <span class="n">05</span><span class="op chop">Range + Limit</span>
+          <span class="desc">0.95~1.25 → 0~1 "펴짐" + Clamp — <strong>Math Range는 클램프를 안 해서</strong> Limit이 뒷문 닫기</span><span class="tag">같은 척추: 정규화</span>
+        </div>
+      </div>
+      <p class="muted" style="margin-top: 3vh;">이 블록 하나 만들고 <strong>3번 복붙</strong>(중지·약지·새끼) → Merge → Lag → <code>null_fingers</code>. 완성본 <code>/project1/07_RPS_Chop</code> · <a href="week2_07_rpschop.html" target="_blank">상세 가이드 ↗</a></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- RPS-4. 판정 -->
+  <section class="slide">
+    <div class="slide-label">RPS <span class="sub">— 07 순수 CHOP ③ 판정: 조건문 없이 곱셈으로</span></div>
+    <div class="body">
+      <div class="roadmap" style="margin-bottom: 2.5vh;">
+        <div class="step hot">
+          <span class="n">01</span><span class="op chop">Logic 이진화</span>
+          <span class="desc">펴짐 0~1 → <strong>0/1 스위치</strong> (Bounds 0.5~1.5) — 연속값을 곱하면 0.8⁴=0.41로 뭉개져서 판정 불능</span><span class="tag">★ 실제 버그였음</span>
+        </div>
+        <div class="step">
+          <span class="n">02</span><span class="op chop">Math 1-x</span>
+          <span class="desc">Range 0~1 → 1~0 = <strong>NOT</strong> ("굽힘")</span><span class="tag">뒤집기</span>
+        </div>
+        <div class="step hot">
+          <span class="n">03</span><span class="op chop">Merge + Multiply</span>
+          <span class="desc">0/1의 곱 = <strong>AND</strong> — 조건문이 필요 없다</span><span class="tag">★ 퍼지 논리</span>
+        </div>
+        <div class="step">
+          <span class="n">04</span><span class="op chop">active 곱하기</span>
+          <span class="desc"><code>hand_active</code>를 곱셈의 한 항으로 — 손 없으면 전부 0, <strong>게이트 공짜</strong></span><span class="tag">02 테레민의 그 게이트</span>
+        </div>
+      </div>
+      <div class="td-panel">
+        <pre style="font-family: var(--mono); color: #cfcfd6; font-size: clamp(13px, 1.55vw, 23px); line-height: 1.8; background: none; margin: 0;">바위 = (1-검지) × (1-중지) × (1-약지) × (1-새끼) × active
+보   =   검지  ×   중지  ×   약지  ×   새끼   × active
+가위 =   검지  ×   중지  × (1-약지) × (1-새끼) × active</pre>
+      </div>
+      <p class="muted" style="margin-top: 2.5vh;">마지막은 늘 하던 것: Merge → Lag(디바운스) → Null → Text TOP(argmax + 문턱 0.5). 미터(거리→비율→펴짐→판정)가 전부 뷰어로 보이는 게 CHOP 버전의 특권 — 코드로 압축한 버전은 <code>08_RPS_Script</code>.</p>
     </div>
     <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
   </section>
@@ -733,7 +833,8 @@
     { num: '02', title: 'MediaPipe', desc: '개념 · 손 21 랜드마크 · 플러그인 세팅',       slide: 5 },
     { num: '03', title: '01_Hand',   desc: '가이드 빌드 ① — 손 → 정규화 → 파티클·사운드', slide: 8 },
     { num: '04', title: '03_Pose',   desc: '가이드 빌드 ② — 포즈 인터랙션 · 확장 미션',   slide: 11 },
-    { num: '05', title: '마무리',    desc: '다음 주 예고(아두이노) · 정리',              slide: 13 },
+    { num: '05', title: 'RPS',       desc: '최종 미션 — 가위바위보 3부작 · 순수 CHOP 설계', slide: 13 },
+    { num: '06', title: '마무리',    desc: '다음 주 예고(아두이노) · 정리',              slide: 17 },
   ];
   const chapterOf = i => chapters.reduce((a, c, k) => i >= c.slide ? k : a, 0);
 
@@ -772,7 +873,7 @@
     slides.forEach((s, k) => s.classList.toggle('active', k === cur));
     const ch = chapterOf(cur);
     navBtns.forEach((b, k) => b.classList.toggle('on', k === ch));
-    meta.textContent = `${cur + 1} / ${slides.length} · ←→ 이동 · 1~6 챕터 · F 전체화면`;
+    meta.textContent = `${cur + 1} / ${slides.length} · ←→ 이동 · 1~7 챕터 · F 전체화면`;
     bar.style.width = ((cur + 1) / slides.length * 100) + '%';
     if (location.hash !== '#' + (cur + 1)) history.replaceState(null, '', '#' + (cur + 1));
   }

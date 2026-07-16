@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>08_RPS_Chop — CHOP 온리 가위바위보 · 수퍼 테스트베드 LAB 2주차</title>
+<title>07_RPS_Chop — 순수 CHOP 가위바위보 — 회전 불변 · 수퍼 테스트베드 LAB 2주차</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
@@ -103,29 +103,39 @@
 </style>
 </head>
 <body>
-<nav class="topnav"><a class="back" href="week2.html">← 2주차 슬라이드</a><a href="week2_01_hand.html">01_Hand</a><a href="week2_02_theremin.html">02_Theremin</a><a href="week2_03_pose.html">03_Pose</a><a href="week2_04_twohands.html">04_TwoHands</a><a href="week2_05_pinch.html">05_Pinch</a><a href="week2_06_rps.html">06_RPS</a><a href="week2_07_rpsgeo.html">07_RPS_Geo</a><a class="on" href="week2_08_rpschop.html">08_RPS_Chop</a></nav>
+<nav class="topnav"><a class="back" href="week2.html">← 2주차 슬라이드</a><a href="week2_01_hand.html">01_Hand</a><a href="week2_02_theremin.html">02_Theremin</a><a href="week2_03_pose.html">03_Pose</a><a href="week2_04_twohands.html">04_TwoHands</a><a href="week2_05_pinch.html">05_Pinch</a><a href="week2_06_rps.html">06_RPS</a><a class="on" href="week2_07_rpschop.html">07_RPS_Chop</a><a href="week2_08_rpsscript.html">08_RPS_Script</a></nav>
 <div class="wrap">
-<div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>08_RPS_Chop</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/08_RPS_Chop</b></div>
+<div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>07_RPS_Chop</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/07_RPS_Chop</b></div>
 
-<h1>08_RPS_Chop</h1>
-<p class="lead">07과 <strong>완전히 같은 수학</strong>을 — 파이썬 없이 <strong>순수 CHOP 노드만으로</strong>. 코드가 하던 일이 전부 와이어로 보입니다.</p>
-<div class="meta"><span>07의 CHOP 번역판</span><span>노드 ~50개</span><span>새 무기: Length · 퍼지 AND</span><span>난이도 ●●●</span></div>
+<h1>07_RPS_Chop</h1>
+<p class="lead">06의 제스처 모델은 <strong>브이를 수직으로 세워야만</strong> 가위로 인식합니다. 이번엔 <strong>관절 xyz 좌표로 직접 기하학을 계산</strong> — 파이썬 없이 순수 CHOP만으로, 손을 어느 방향으로 돌려도 잡아내는 심판을 만듭니다.</p>
+<div class="meta"><span>최종 미션 심화</span><span>노드 ~50개</span><span>새 무기: Length · Logic 이진화 · 퍼지 AND</span><span>난이도 ●●●</span></div>
 
-<h2><span class="no">A</span>Script → CHOP 번역표</h2>
-<p>07의 파이썬 한 줄 한 줄이 어떤 노드가 되는지 — 이 표가 이 베이스의 전부입니다:</p>
+<h2><span class="no">A</span>왜 06으로는 안 되나 — 블랙박스 vs 화이트박스</h2>
 <table>
-<tr><th>07 (파이썬)</th><th>08 (CHOP)</th></tr>
-<tr><td class="k">d3() 거리 계산</td><td><span class="chip chop">Math</span> Combine CHOPs: <b>Subtract</b> → <span class="chip chop">Math</span> Combine Channels: <b>Length</b> <span class="muted">— 피타고라스 √(x²+y²+z²)가 메뉴에 있다!</span></td></tr>
-<tr><td class="k">ratio = d_tip / d_pip</td><td><span class="chip chop">Math</span> Combine CHOPs: <b>Divide</b></td></tr>
-<tr><td class="k">(ratio-0.95)/(1.25-0.95)</td><td><span class="chip chop">Math</span> Range 0.95~1.25 → 0~1</td></tr>
-<tr><td class="k">max(0, min(1, …)) 클램프</td><td><span class="chip chop">Limit</span> Clamp 0~1 <span class="muted">— Math Range는 클램프를 안 함</span></td></tr>
-<tr><td class="k">up 리스트 (ext > 0.5)</td><td><span class="chip chop">Logic</span> On When Value in Bounds <code>0.5~1.5</code> — <b>이진화</b>. 이게 빠지면 곱이 뭉개져 판정이 안 뜸!</td></tr>
-<tr><td class="k">if n==0 / n==4 / 검지+중지</td><td><b>곱셈 3개</b> — 아래 "퍼지 AND" 참고</td></tr>
-<tr><td class="k">× active 게이트</td><td>active를 <b>곱셈의 한 항으로</b> Merge에 끼움</td></tr>
+<tr><th></th><th>06_RPS (제스처 모델)</th><th>07_RPS_Chop (관절 기하학)</th></tr>
+<tr><td class="k">재료</td><td>학습된 분류기의 확률</td><td>21개 관절의 원시 xyz</td></tr>
+<tr><td class="k">방향</td><td>학습 데이터 방향대로만 (브이는 수직!)</td><td><strong class="accent">회전 무관</strong> — 눕힌 가위도 OK</td></tr>
+<tr><td class="k">고칠 수 있나</td><td>블랙박스 — 문턱값 정도만</td><td>화이트박스 — 규칙을 내가 정함</td></tr>
+<tr><td class="k">디버깅</td><td>확률만 보임</td><td><strong>모든 중간값이 뷰어에</strong> — 거리→비율→펴짐→판정</td></tr>
 </table>
-<div class="why"><b>트레이드오프.</b> Script 30줄 ↔ CHOP 50노드. 노드 버전은 <b>모든 중간값이 뷰어로 보이고</b>(디버깅 천국) 코드를 몰라도 읽힙니다. 스크립트 버전은 압축적이고 규칙 바꾸기가 빠릅니다. 같은 수학, 다른 표현 — 둘 다 할 줄 알면 상황 따라 고르면 됩니다.</div>
+<div class="why"><b>왜 모델은 방향을 타나?</b> 분류기는 학습 사진들의 분포를 외운 것 — 세상 사람들이 브이를 대부분 세워서 찍으니, 눕힌 브이는 본 적 없는 낯선 데이터. 기하학은 외우지 않고 <b>계산</b>하니까 이 문제가 없습니다.</div>
 
-<h2><span class="no">B</span>손가락 블록 — 하나 만들고 3번 복붙</h2>
+<h2><span class="no">B</span>핵심 아이디어: 회전 불변량</h2>
+<p>"손가락이 펴졌다"를 방향 없이 정의하려면? <strong>손끝이 손목에서 얼마나 멀어졌는지</strong>를 보면 됩니다:</p>
+<pre>  펴진 손가락              굽힌 손가락
+      ● tip                   ● pip
+      │                      ╱ ● tip  <span class="c">← 접혀서 손목 쪽으로</span>
+      ● pip                 │
+  ────●──── wrist       ────●──── wrist
+
+  ratio = dist(tip, wrist) ÷ dist(pip, wrist)
+  펴짐: ratio ≈ 1.25+     굽힘: ratio ≈ 0.95-
+  <span class="o">★ 손을 어떻게 돌려도 두 거리는 같이 돌아간다 → 비율은 불변</span></pre>
+<div class="why"><b>왜 절대거리가 아니라 비율?</b> 절대거리는 손 크기·카메라와의 거리에 오염됩니다. 비율은 그 오염이 분모·분자에서 상쇄 — <b>정규화의 기하학 버전.</b> z까지 3D로 계산해서 손가락이 카메라 쪽으로 접혀도 잡아냅니다.</div>
+<p>판정 규칙은 펴진 손가락 <strong>개수</strong>(엄지 제외 4개 중): 0개 = ✊ 바위 · 딱 검지+중지 = ✌ 가위 · 4개 = ✋ 보 · 그 외 = 판정 보류.</p>
+
+<h2><span class="no">C</span>손가락 블록 — 하나 만들고 3번 복붙</h2>
 <div class="td-panel">
   <div class="net-row">
     <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">xyz</span></div><span class="opname">sel_tip_index</span><span class="krname">손끝 3채널</span></div>
@@ -139,59 +149,57 @@
   <p class="annot">같은 3노드가 pip에도 (sub_pip → len_pip) — ratio의 2번 입력으로. sel_wrist는 4개 블록이 공유.</p>
 </div>
 <table>
-<tr><th>노드</th><th>설정</th><th>왜</th></tr>
-<tr><td class="k">sel_tip_index</td><td>CHOPs <code>../hand_tracking2/normalized_data</code> · <code>h1:index_finger_tip:*</code></td><td>손끝 x·y·z 3채널</td></tr>
-<tr><td class="k">sub_tip_index</td><td>2입력 Math · Combine CHOPs = <b>Subtract</b> · Match by <b>Index</b></td><td>채널명이 달라서 순서로 매칭 — (tip-wrist) 벡터</td></tr>
-<tr><td class="k">len_tip_index</td><td>Math · Combine Channels = <b>Length</b></td><td>3채널 → 1채널 3D 거리. 제곱·합·루트가 이 메뉴 하나</td></tr>
-<tr><td class="k">ratio_index</td><td>2입력 Math · Combine CHOPs = <b>Divide</b> · Rename <code>*</code>→<code>index</code></td><td>회전 불변 비율. 채널명 = 손가락 이름</td></tr>
+<tr><th>노드</th><th>설정</th><th>왜 이 노드인가</th></tr>
+<tr><td class="k">sel_tip_index</td><td>CHOPs <code>../hand_tracking2/normalized_data</code> · <code>h1:index_finger_tip:*</code></td><td>점 하나 = x·y·z 3채널짜리 <b>벡터</b>로 다루기 위해</td></tr>
+<tr><td class="k">sub_tip_index</td><td>2입력 Math · Combine CHOPs = <b>Subtract</b> · Match by <b>Index</b></td><td>손목 기준 <b>상대 벡터</b>. 채널명이 달라서 순서(Index)로 매칭 — Name 매칭은 조용히 실패</td></tr>
+<tr><td class="k">len_tip_index</td><td>Math · Combine Channels = <b>Length</b></td><td>√(x²+y²+z²) — 제곱·합·루트 세 단계가 <b>메뉴 하나</b></td></tr>
+<tr><td class="k">ratio_index</td><td>2입력 Math · Combine CHOPs = <b>Divide</b> · Rename <code>*</code>→<code>index</code></td><td>비율 = <b>회전·크기 불변</b>. 채널명 = 손가락 이름 (척추의 Rename 습관)</td></tr>
 </table>
-<p>4개 블록의 ratio를 <span class="chip chop">Merge</span>로 합치고 → <span class="chip chop">Math</span>(Range 0.95~1.25→0~1) → <span class="chip chop">Limit</span>(Clamp 0~1) → <span class="chip chop">Lag</span>(0.1) → <code>null_fingers</code>. 척추 완성 — 채널 4개: <code>index middle ring pinky</code> = 펴짐 0~1.</p>
+<p>4개 블록의 ratio를 <span class="chip chop">Merge</span>로 합치고 → <span class="chip chop">Math</span> Range 0.95~1.25 → 0~1 → <span class="chip chop">Limit</span> Clamp 0~1 → <span class="chip chop">Lag</span>(0.1) → <code>null_fingers</code>.</p>
+<div class="why"><b>왜 Limit이 따로?</b> Math의 Range는 리매핑만 하고 <b>클램프를 안 합니다</b> — 범위 밖 비율이 그대로 새어 나와요. Limit(Clamp 0~1)이 뒷문을 닫습니다.</div>
 
-<h2><span class="no">C</span>판정 — 이진화 후 AND는 곱셈이다</h2>
-<p>먼저 <span class="chip chop">Logic</span> <code>logic_up</code>(On When Value in Bounds 0.5~1.5)으로 펴짐 0~1을 <strong>0/1 스위치로 이진화</strong>합니다. 0.8⁴=0.41처럼 연속값의 곱은 뭉개져서 판정이 안 뜨거든요 — 실제로 처음 빌드에서 겪은 버그입니다. 이진화하면 "전부 굽었나?" 같은 조건문이 곱셈으로 끝납니다:</p>
+<h2><span class="no">D</span>판정 — 이진화 후, AND는 곱셈이다</h2>
+<p>먼저 <span class="chip chop">Logic</span> <code>logic_up</code>(On When Value in Bounds <code>0.5~1.5</code>)으로 펴짐 0~1을 <strong>0/1 스위치로 이진화</strong>합니다:</p>
+<div class="why"><b>이게 왜 필요한가 (실제 버그).</b> 연속값을 바로 곱하면 보 = 0.8×0.8×0.8×0.8 = <b>0.41</b> — 손을 활짝 펴도 문턱 근처에서 뭉개져 판정이 안 뜹니다. 0/1로 자른 뒤 곱하면 정확히 0 아니면 1.</div>
 <pre>바위 = (1-검지) × (1-중지) × (1-약지) × (1-새끼) × active
 보   =   검지  ×   중지  ×   약지  ×   새끼  × active
 가위 =   검지  ×   중지  × (1-약지) × (1-새끼) × active
 
-<span class="c">입력이 0/1이니 곱도 정확히 0 또는 1 = 깔끔한 AND</span>
-<span class="c">(1-x)는 NOT. active를 곱하면 손 없을 때 전부 0 = 게이트 공짜</span></pre>
+<span class="c">0/1의 곱 = AND · (1-x) = NOT · active 곱하기 = 손 없으면 전부 0 (게이트 공짜)</span></pre>
 <table>
 <tr><th>노드</th><th>구성</th></tr>
-<tr><td class="k">logic_up</td><td>Logic · On When Value in Bounds <code>0.5~1.5</code> · null_fingers에 연결 — <b>0/1 이진화</b></td></tr>
-<tr><td class="k">inv_fingers</td><td>Math Range 0~1 → <b>1~0</b> = 뒤집기(NOT). logic_up에 연결</td></tr>
-<tr><td class="k">merge_rock → mul_rock</td><td>Merge(inv_fingers 4ch + sel_active 1ch) → Math Combine Channels = <b>Multiply</b> → rename <code>rock</code></td></tr>
+<tr><td class="k">logic_up</td><td>Logic · On When Value in Bounds <code>0.5~1.5</code> — null_fingers에 연결</td></tr>
+<tr><td class="k">inv_fingers</td><td>Math Range 0~1 → <b>1~0</b> = NOT. logic_up에 연결</td></tr>
+<tr><td class="k">merge_rock → mul_rock</td><td>Merge(inv_fingers + sel_active) → Math Combine Channels = <b>Multiply</b> → rename <code>rock</code></td></tr>
 <tr><td class="k">merge_paper → mul_paper</td><td>Merge(logic_up + active) → Multiply → <code>paper</code></td></tr>
-<tr><td class="k">merge_scissors → mul_scissors</td><td>Merge(검지·중지는 logic_up에서, 약지·새끼는 inv_fingers에서 Select + active) → Multiply → <code>scissors</code></td></tr>
+<tr><td class="k">merge_scissors → mul_scissors</td><td>Merge(검지·중지 = logic_up에서 Select, 약지·새끼 = inv_fingers에서 Select, + active) → Multiply → <code>scissors</code></td></tr>
 </table>
-<p>셋을 Merge → <span class="chip chop">Lag</span>(0.08, 경계 파닥임 디바운스) → <code>null_rps</code>. 판정 텍스트는 06·07과 같은 Text TOP, 문턱 <strong>0.5</strong>.</p>
-<div class="why"><b>이 패턴 어디서 봤지?</b> 05_Pinch의 Logic(스위치)이 하던 일을 곱셈이 부드럽게 대신합니다. Logic은 딱딱한 0/1, 곱은 <b>연속적인 확신</b> — 미터가 부드럽게 반응하는 이유.</div>
+<p>셋을 Merge → <span class="chip chop">Lag</span>(0.08, 경계 파닥임 디바운스) → <code>null_rps</code> → 판정 텍스트(06과 같은 Text TOP, argmax + 문턱 0.5) + 손가락 미터 4개.</p>
 
-<h2><span class="no">D</span>조절 노브</h2>
+<h2><span class="no">E</span>조절 노브</h2>
 <table>
 <tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
-<tr><td>캘리브레이션 (07의 R_CURL/R_OPEN)</td><td class="k">math_norm · From Range</td><td>주먹에서 미터 완전히 꺼지고 보자기에서 꽉 차게 (0.9~1.3 사이 조정)</td></tr>
-<tr><td>판정 민감도</td><td class="k">logic_up · Bound Min 0.5</td><td>손가락 '폈다' 판정 기준 — 미터 보며 조정</td></tr>
-<tr><td>반응 속도</td><td class="k">lag_fingers</td><td>0.05~0.2</td></tr>
+<tr><td>캘리브레이션</td><td class="k">math_norm · From Range</td><td>주먹에서 미터 완전히 꺼지고 보자기에서 꽉 차게 (0.9~1.3)</td></tr>
+<tr><td>'폈다' 판정 기준</td><td class="k">logic_up · Bound Min</td><td>0.5 기본 — 미터 보며 조정</td></tr>
+<tr><td>반응 속도</td><td class="k">lag_fingers / lag_rps</td><td>0.05~0.2</td></tr>
 </table>
 
-<h2><span class="no">E</span>안 될 때</h2>
+<h2><span class="no">F</span>안 될 때</h2>
 <ul class="plain">
-<li><strong>중간값을 봐라 — 이 버전의 특권</strong> — len_tip_index(거리), ratio_index(비율), null_fingers(펴짐), null_rps(판정) 뷰어를 차례로 열면 어디서 죽었는지 바로 보입니다. Script 버전은 이게 안 됨.</li>
-<li><strong>Subtract가 이상해요</strong> — 2입력 Math의 Match by가 <b>Index</b>인지 확인 (채널명이 달라 Name 매칭은 실패).</li>
-<li><strong>미터는 되는데 텍스트가 안 바뀌어요</strong> — 이진화(logic_up)가 빠졌거나 Select의 CHOPs 경로 문제. 특히 경로에 <code>./</code>를 붙이면 조용히 빈 출력이 됩니다 — 그냥 <code>logic_up</code>처럼 이름만. (실화: 이 베이스 첫 버전의 버그 두 개가 정확히 이거였습니다)</li>
-<li><strong>비율이 0이에요</strong> — 손이 없으면 좌표가 전부 0 → 거리 0. 정상입니다 (active 게이트가 판정을 막아줌).</li>
+<li><strong>중간값을 봐라 — 이 버전의 특권</strong> — len_tip_index(거리) → ratio_index(비율) → null_fingers(펴짐) → logic_up(스위치) → null_rps(판정) 뷰어를 차례로 열면 어디서 죽었는지 바로 보입니다.</li>
+<li><strong>미터는 되는데 텍스트가 안 바뀌어요</strong> — 이진화(logic_up)가 빠졌거나 Select 경로 문제. 특히 경로에 <code>./</code>를 붙이면 <b>조용히 빈 출력</b>이 됩니다(워닝도 없음!) — 시블링은 그냥 <code>logic_up</code>처럼 이름만. (실화: 첫 버전의 버그 두 개가 정확히 이거였습니다)</li>
+<li><strong>Subtract가 이상해요</strong> — Match by가 <b>Index</b>인지 확인.</li>
 <li><strong>바위만 계속 떠요</strong> — math_norm From Range 1(0.95)을 올려보세요. 손가락이 "덜 굽음"으로 새는 중.</li>
 </ul>
 
-<h2><span class="no">F</span>더 가보기</h2>
+<h2><span class="no">G</span>더 가보기</h2>
 <ul class="plain">
-<li><strong>07 vs 08 나란히</strong> — 같은 손, 두 심판. 판정이 갈리는 순간을 찾아보세요 (거의 없을 겁니다 — 같은 수학이니까. 그게 포인트).</li>
-<li><strong>Trail CHOP 디버깅</strong> — ratio 채널에 Trail을 붙이면 시간 그래프로 보임. 문턱을 어디 둘지 눈으로 정할 수 있습니다.</li>
-<li><strong>가중치 판정</strong> — 곱 대신 Math Combine Channels = Average로 바꾸면 "다수결" 성격으로 — AND와 평균의 차이를 몸으로.</li>
-<li><strong>새 제스처</strong> — 곱셈 조합만 바꾸면 됩니다: 검지만 = 포인팅, 검지+새끼 = 🤘 록사인.</li>
+<li><strong>Trail CHOP 디버깅</strong> — ratio 채널에 Trail을 붙이면 시간 그래프 — 문턱을 눈으로 정할 수 있습니다.</li>
+<li><strong>새 제스처</strong> — 곱셈 조합만 바꾸면: 검지만 = 포인팅, 검지+새끼 = 🤘.</li>
+<li><strong>같은 수학, 코드로</strong> — <a href="week2_08_rpsscript.html">08_RPS_Script</a>: 이 50노드가 파이썬 30줄이 되는 걸 보세요. 규칙이 복잡해질수록 코드가 유리해집니다.</li>
 </ul>
 
-<div class="pagenav"><a href="week2_07_rpsgeo.html">← 07_RPS_Geo<span class="sub">기하학 가위바위보 — 회전 불변</span></a><span></span></div>
+<div class="pagenav"><a href="week2_06_rps.html">← 06_RPS<span class="sub">가위바위보 심판</span></a><a href="week2_08_rpsscript.html" style="text-align:right;">08_RPS_Script →<span class="sub">같은 수학을 파이썬 30줄로</span></a></div>
 </div>
 </body>
 </html>
