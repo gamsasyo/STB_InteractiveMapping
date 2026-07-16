@@ -627,6 +627,38 @@
     <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
   </section>
 
+  <!-- 11b. 02_Theremin 빌드 -->
+  <section class="slide">
+    <div class="slide-label">02_Theremin <span class="sub">— 허공 테레민 빌드: 왜 이렇게</span></div>
+    <div class="body">
+      <div class="roadmap">
+        <div class="step">
+          <span class="n">01</span><span class="op chop">척추 복붙</span>
+          <span class="desc">01_Hand의 다섯 노드 그대로 (Ctrl/Cmd+C·V) — <strong>새 개념 0개</strong>. Lag만 <code>0.15</code>로</span><span class="tag">글라이드 맛</span>
+        </div>
+        <div class="step hot">
+          <span class="n">02</span><span class="op chop">게이트</span>
+          <span class="desc">helpers의 <code>h1:hand_active</code> → Lag <strong>비대칭</strong>(0.05/0.3) → <code>null_gate</code> — 손 없으면 무음, 뗄 때는 페이드아웃</span><span class="tag">★ 뚝 안 끊기게</span>
+        </div>
+        <div class="step hot">
+          <span class="n">03</span><span class="op chop">Audio Oscillator</span>
+          <span class="desc">Frequency = <code>220 * 2 ** ((1-handy) * 2)</code> — <strong>귀는 로그로 듣는다</strong>, 옥타브 = ×2라서 지수에</span><span class="tag">★ 손높이 = 음정</span>
+        </div>
+        <div class="step">
+          <span class="n">04</span><span class="op chop">Amp + Out</span>
+          <span class="desc">Amplitude = <code>active × handx × 0.4</code> (좌우 = 볼륨) → Audio Device Out(0.5)</span><span class="tag">완성</span>
+        </div>
+      </div>
+      <div class="td-panel" style="margin-top: 2.5vh;">
+        <pre style="font-family: var(--mono); color: #cfcfd6; font-size: clamp(12px, 1.4vw, 21px); line-height: 1.7; background: none; margin: 0;">handy(손 높이)   1.0 바닥   → 220 Hz (A3)
+                0.5 중간   → 440 Hz (A4)  <span style="color:#e8820c;">← ×2</span>
+                0.0 꼭대기 → 880 Hz (A5)  <span style="color:#e8820c;">← ×2</span>    두 옥타브의 허공 건반</pre>
+      </div>
+      <p class="muted" style="margin-top: 2.5vh;">노브: 기준음 = <code>220</code> · 음역 폭 = <code>* 2</code> · 성격 = Waveform(Sine 휘파람 · Saw 브라스) — 완성본 <code>/project1/02_Theremin</code> · <a href="week2_02_theremin.html" target="_blank">상세 가이드 ↗</a></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
   <!-- 12. 가이드 빌드 ② 포즈 -->
   <section class="slide">
     <div class="slide-label">03_Pose <span class="sub">— 가이드 빌드 ② · 15:30~16:00 · 같은 패턴, 몸 전체로</span></div>
@@ -831,10 +863,10 @@
     { num: '00', title: '인트로',    desc: '오늘의 미션 · 흐름',                        slide: 0 },
     { num: '01', title: '복습',      desc: '입력→정규화→매핑 — 입력 칸만 바뀐다',        slide: 4 },
     { num: '02', title: 'MediaPipe', desc: '개념 · 손 21 랜드마크 · 플러그인 세팅',       slide: 5 },
-    { num: '03', title: '01_Hand',   desc: '가이드 빌드 ① — 손 → 정규화 → 파티클·사운드', slide: 8 },
-    { num: '04', title: '03_Pose',   desc: '가이드 빌드 ② — 포즈 인터랙션 · 확장 미션',   slide: 11 },
-    { num: '05', title: 'RPS',       desc: '최종 미션 — 가위바위보 3부작 · 순수 CHOP 설계', slide: 13 },
-    { num: '06', title: '마무리',    desc: '다음 주 예고(아두이노) · 정리',              slide: 17 },
+    { num: '03', title: '01_Hand',   desc: '가이드 빌드 ① — 손 → 빛(01_Hand) · 테레민(02_Theremin)', slide: 8 },
+    { num: '04', title: '03_Pose',   desc: '가이드 빌드 ② — 포즈 인터랙션 · 확장 미션',   slide: 12 },
+    { num: '05', title: 'RPS',       desc: '최종 미션 — 가위바위보 3부작 · 순수 CHOP 설계', slide: 14 },
+    { num: '06', title: '마무리',    desc: '다음 주 예고(아두이노) · 정리',              slide: 18 },
   ];
   const chapterOf = i => chapters.reduce((a, c, k) => i >= c.slide ? k : a, 0);
 
