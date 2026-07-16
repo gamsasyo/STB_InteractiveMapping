@@ -58,5 +58,5 @@ TouchDesigner 인터랙티브 아트 워크숍 자료입니다.
 - **MediaPipe TD Plugin**: https://github.com/torinmb/mediapipe-touchdesigner — 설치 불필요, 릴리즈의 `.toe` 실행
 - **Arduino IDE** (3주차): https://www.arduino.cc/en/software
 
-TD 파일은 위 링크로 바로 받으세요 (깃헙 Raw 보기에서 ⌘S로 저장하면 깨질 수 있습니다). 노드를 클릭하면 파라미터 창 위 초록 코멘트가 안내합니다.
+노드를 클릭하면 파라미터 창 위 초록 코멘트가 안내합니다.
 공통 노드: **입력 → 정규화 → 매핑** — 소스만 바뀝니다.
