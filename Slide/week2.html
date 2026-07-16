@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수퍼 테스트베드 LAB — 2주차 MediaPipe 인터랙션</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper: #ffffff;
+    --ink: #141414;
+    --gray: #8d8d8d;
+    --faint: #ececec;
+    --accent: #e8820c;            /* Shin's annotation orange */
+    --panel: #1d1d21;             /* TD network editor dark */
+    --panel-grid: #26262b;
+    --node-body: #101012;
+    --fam-top: #a88bd4;           /* TOP purple */
+    --fam-chop: #8fbf6f;          /* CHOP green */
+    --fam-dat: #d46a9f;
+    --wire: #7a7a82;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "JetBrains Mono", monospace;
+    --sans: -apple-system, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", sans-serif;
+  }
+
+  html, body { height: 100%; background: #cfcfcf; font-family: var(--sans); color: var(--ink); }
+
+  .deck { height: 100%; overflow: hidden; position: relative; background: var(--paper); }
+
+  .slide {
+    position: absolute; inset: 0;
+    background: var(--paper);
+    display: none;
+    flex-direction: column;
+    padding: 5.5vh 6vw calc(3vh + 46px);
+  }
+  .slide.active { display: flex; animation: enter .34s ease-out; }
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slide.active { animation: none; }
+    .wave { animation: none !important; }
+  }
+
+  /* ── top label, footer ─────────────────────────── */
+  .slide-label {
+    font-family: var(--mono);
+    font-size: clamp(14px, 1.35vw, 20px);
+    font-weight: 700;
+    letter-spacing: .01em;
+  }
+  .slide-label .sub { color: var(--gray); font-weight: 400; }
+
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+
+  .footer {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--mono);
+    font-size: clamp(11px, .95vw, 14px);
+    color: var(--gray);
+    padding-top: 2.5vh;
+  }
+
+  /* ── type ──────────────────────────────────────── */
+  h1 { font-family: var(--mono); font-size: clamp(36px, 5.4vw, 84px); font-weight: 700; letter-spacing: -0.03em; text-wrap: balance; }
+  h2 { font-size: clamp(28px, 3.6vw, 56px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4vh; text-wrap: balance; }
+  p, li { font-size: clamp(16px, 1.75vw, 27px); line-height: 1.6; }
+  .muted { color: var(--gray); }
+  .accent { color: var(--accent); }
+  .big { font-size: clamp(26px, 3.4vw, 52px); font-weight: 800; line-height: 1.35; letter-spacing: -0.02em; }
+  .center { text-align: center; }
+  .slide a { color: var(--accent); text-underline-offset: 3px; }
+  code {
+    font-family: var(--mono);
+    background: var(--faint);
+    padding: .08em .4em;
+    border-radius: 5px;
+    font-size: .9em;
+  }
+
+  /* ── TD network panel ──────────────────────────── */
+  .td-panel {
+    position: relative;
+    background:
+      repeating-linear-gradient(0deg,  transparent 0 59px, var(--panel-grid) 59px 60px),
+      repeating-linear-gradient(90deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      var(--panel);
+    border-radius: 12px;
+    padding: 5vh 3.5vw;
+    overflow: hidden;
+  }
+  .td-panel .annot {
+    font-family: var(--mono);
+    color: var(--accent);
+    font-size: clamp(13px, 1.4vw, 21px);
+    line-height: 1.7;
+  }
+
+  .net-row { display: flex; align-items: center; gap: 0; }
+
+  .node { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .node .chassis {
+    width: clamp(104px, 11vw, 168px);
+    height: clamp(58px, 6.2vw, 96px);
+    background: var(--node-body);
+    border: 2px solid var(--fam, var(--fam-top));
+    border-radius: 6px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.35);
+  }
+  .node .chassis::before, .node .chassis::after {
+    content: ""; position: absolute; top: 18%; bottom: 18%; width: 5px;
+    background: var(--fam, var(--fam-top)); opacity: .85; border-radius: 2px;
+  }
+  .node .chassis::before { left: -3.5px; }
+  .node .chassis::after  { right: -3.5px; }
+  .node .fam-tag {
+    position: absolute; top: 5px; left: 8px;
+    font-family: var(--mono); font-size: clamp(8px, .75vw, 11px);
+    color: var(--fam, var(--fam-top)); letter-spacing: .08em;
+  }
+  .node .viewer { font-family: var(--mono); font-size: clamp(11px, 1.15vw, 17px); color: #cfcfd6; }
+  .node .opname { font-family: var(--mono); font-size: clamp(11px, 1.1vw, 16px); color: #b9b9c2; }
+  .node .krname { font-size: clamp(11px, 1.05vw, 16px); color: #77777f; }
+
+  .node.chop { --fam: var(--fam-chop); }
+  .node.top  { --fam: var(--fam-top); }
+
+  .wire { flex: 1 1 0; min-width: 26px; height: 2px; background: var(--wire); position: relative; margin: 0 2px; transform: translateY(calc(-1 * clamp(10px, 1.1vw, 16px))); }
+  .wire::after {
+    content: ""; position: absolute; right: -1px; top: 50%;
+    transform: translateY(-50%);
+    border-left: 8px solid var(--wire);
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+  .wire .io {
+    position: absolute; top: 8px; width: 100%; text-align: center;
+    font-family: var(--mono); font-size: clamp(9px, .9vw, 13px); color: #6d6d75;
+  }
+
+  /* ── tables ────────────────────────────────────── */
+  table { border-collapse: collapse; width: 100%; }
+  th, td {
+    padding: 1.5vh 1.4vw;
+    font-size: clamp(15px, 1.7vw, 26px);
+    text-align: left;
+    border-bottom: 1px solid var(--faint);
+    vertical-align: middle;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: clamp(12px, 1.15vw, 17px);
+    color: var(--gray);
+    font-weight: 500;
+    letter-spacing: .06em;
+    border-bottom: 2px solid var(--ink);
+  }
+  .chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(13px, 1.4vw, 21px);
+    padding: .18em .6em;
+    border-radius: 6px;
+    color: #fff;
+  }
+  .chip.top  { background: var(--fam-top); color: #1c1428; }
+  .chip.chop { background: var(--fam-chop); color: #16210f; }
+  .chip.dim  { background: var(--faint); color: var(--gray); }
+  td.today { font-weight: 700; color: var(--accent); }
+
+  /* ── schedule ──────────────────────────────────── */
+  .sched { display: grid; grid-template-columns: auto 1fr; row-gap: 0; }
+  .sched .t, .sched .what {
+    padding: 1.7vh 0;
+    border-bottom: 1px solid var(--faint);
+    display: flex; align-items: center;
+  }
+  .sched .t {
+    font-family: var(--mono);
+    font-size: clamp(15px, 1.7vw, 26px);
+    color: var(--gray);
+    padding-right: 3vw;
+  }
+  .sched .what { font-size: clamp(16px, 1.85vw, 28px); gap: .6em; }
+  .sched .hot .t { color: var(--accent); font-weight: 700; }
+  .sched .hot.what, .sched .what.hot { font-weight: 800; }
+  .sched .hot { position: relative; }
+  .sched .what.hot::before {
+    content: ""; position: absolute; left: -1.6vw; top: 22%; bottom: 22%;
+    width: 5px; background: var(--accent); border-radius: 3px;
+  }
+
+  /* ── list ──────────────────────────────────────── */
+  ul.clean { list-style: none; display: flex; flex-direction: column; gap: 2.4vh; }
+  ul.clean li { padding-left: 1.5em; position: relative; }
+  ul.clean li::before {
+    content: ""; position: absolute; left: 0; top: .58em;
+    width: .55em; height: .55em; border-radius: 2px;
+    background: var(--accent);
+  }
+  ul.clean li strong { font-weight: 800; }
+
+  /* ── roadmap ───────────────────────────────────── */
+  .roadmap { display: flex; flex-direction: column; }
+  .step {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    align-items: center;
+    gap: 2vw;
+    padding: 1.55vh 1.5vw;
+    border-bottom: 1px solid var(--faint);
+  }
+  .step .n {
+    font-family: var(--mono);
+    font-size: clamp(15px, 1.6vw, 24px);
+    color: var(--gray);
+    width: 2em;
+  }
+  .step .op {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(15px, 1.7vw, 26px);
+    padding: .2em .6em;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .step .op.top  { background: var(--fam-top); color: #1c1428; }
+  .step .op.chop { background: var(--fam-chop); color: #16210f; }
+  .step .desc { font-size: clamp(15px, 1.75vw, 27px); }
+  .step .tag { font-family: var(--mono); font-size: clamp(11px, 1.1vw, 16px); color: var(--gray); white-space: nowrap; }
+  .step.hot { background: #fdf3e7; border-radius: 10px; border-bottom-color: transparent; }
+  .step.hot .n, .step.hot .tag { color: var(--accent); font-weight: 700; }
+  .step.hot .desc { font-weight: 800; }
+
+  /* ── mission cards ─────────────────────────────── */
+  .missions { display: grid; grid-template-columns: 1fr 1fr; gap: 2vh 1.6vw; }
+  .mcard {
+    border: 1.5px solid var(--faint);
+    border-radius: 12px;
+    padding: 2.2vh 1.6vw;
+    display: flex; flex-direction: column; gap: .8vh;
+  }
+  .mcard .mnum {
+    font-family: var(--mono);
+    font-size: clamp(11px, 1.05vw, 15px);
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: .1em;
+  }
+  .mcard h3 { font-size: clamp(17px, 1.9vw, 29px); font-weight: 800; }
+  .mcard p { font-size: clamp(13px, 1.45vw, 22px); line-height: 1.55; color: #444; }
+
+  /* ── pipeline (입력→정규화→매핑) ───────────────── */
+  .pipe { display: flex; align-items: stretch; gap: 0; }
+  .pipe .stage {
+    flex: 1;
+    border: 1.5px solid var(--faint);
+    border-radius: 12px;
+    padding: 2.6vh 1.4vw;
+    text-align: center;
+    display: flex; flex-direction: column; gap: 1.2vh; justify-content: center;
+  }
+  .pipe .stage.hot { border-color: var(--accent); background: #fdf3e7; }
+  .pipe .stage .eyebrow {
+    font-family: var(--mono);
+    font-size: clamp(12px, 1.15vw, 17px);
+    letter-spacing: .14em;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .pipe .stage .what { font-size: clamp(16px, 1.9vw, 29px); font-weight: 800; }
+  .pipe .stage .how { font-size: clamp(12px, 1.3vw, 20px); color: var(--gray); }
+  .pipe .arrow {
+    align-self: center;
+    font-family: var(--mono);
+    font-size: clamp(22px, 2.6vw, 40px);
+    color: var(--ink);
+    padding: 0 1vw;
+  }
+
+  /* ── keys table ────────────────────────────────── */
+  .keys .k { font-family: var(--mono); white-space: nowrap; }
+
+  /* ── wave word (몸 컨트롤러) ────────────────────── */
+  .wave { display: inline-block; animation: wave 4.2s ease-in-out infinite; transform-origin: 70% 80%; }
+  @keyframes wave {
+    0%, 84%, 100% { transform: none; }
+    87% { transform: rotate(-2deg) translateY(-2px); }
+    90% { transform: rotate(2.2deg) translateY(2px); }
+    93% { transform: rotate(-1.6deg); }
+    96% { transform: rotate(1deg); }
+  }
+
+  /* ── hand landmark figure ──────────────────────── */
+  .hand-fig { display: flex; align-items: center; gap: 3vw; }
+  .hand-fig svg { flex: 0 0 auto; height: min(58vh, 34vw); }
+  .hand-fig .legend { display: flex; flex-direction: column; gap: 1.6vh; min-width: 0; }
+  .hand-fig .legend .row {
+    display: flex; align-items: baseline; gap: 1vw;
+    font-size: clamp(14px, 1.6vw, 25px);
+  }
+  .hand-fig .legend .row code { white-space: nowrap; }
+  .hand-fig .legend .idx {
+    font-family: var(--mono); font-weight: 700; color: var(--accent);
+    width: 2.2em; flex: 0 0 auto;
+  }
+
+  /* ── 21 dots ───────────────────────────────────── */
+  .dots { display: flex; justify-content: center; gap: .55vw; margin-top: 3.2vh; }
+  .dots i { width: clamp(8px, .9vw, 14px); height: clamp(8px, .9vw, 14px); border-radius: 50%; background: var(--fam-chop); }
+  .dots i:nth-child(4n) { background: var(--accent); }
+
+  /* ── TOC slide ─────────────────────────────────── */
+  .toc { display: flex; flex-direction: column; }
+  .toc-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 2.2vw;
+    padding: 2.1vh 1vw;
+    border-bottom: 1px solid var(--faint);
+    cursor: pointer;
+  }
+  .toc-item:hover { background: #fdf3e7; }
+  .toc-item .cnum {
+    font-family: var(--mono);
+    font-size: clamp(14px, 1.5vw, 22px);
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .toc-item .ctitle { font-size: clamp(19px, 2.3vw, 36px); font-weight: 800; letter-spacing: -0.01em; }
+  .toc-item .ctitle .muted { font-weight: 400; font-size: .72em; }
+  .toc-item .cpage { font-family: var(--mono); font-size: clamp(12px, 1.15vw, 17px); color: var(--gray); }
+
+  /* ── bottom navigation bar ─────────────────────── */
+  .navbar {
+    position: fixed; left: 0; right: 0; bottom: 4px;
+    height: 42px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px;
+    background: rgba(255,255,255,.94);
+    border-top: 1px solid var(--faint);
+    backdrop-filter: blur(6px);
+    z-index: 10; user-select: none;
+  }
+  .navbar .chapters { display: flex; gap: 4px; overflow-x: auto; }
+  .navbar button {
+    appearance: none; border: 0; background: none;
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--gray);
+    padding: 6px 10px; border-radius: 6px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .navbar button:hover { background: var(--faint); color: var(--ink); }
+  .navbar button.on { color: var(--accent); font-weight: 700; background: #fdf3e7; }
+  .navbar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .navbar .meta { font-family: var(--mono); font-size: 12px; color: var(--gray); white-space: nowrap; padding-left: 12px; }
+
+  .progress {
+    position: fixed; left: 0; bottom: 0; height: 4px;
+    background: var(--accent);
+    width: 0; z-index: 11;
+    transition: width .25s ease;
+  }
+
+
+  /* ── 가이드 오버레이 리더 ─────────────────── */
+  .goverlay { position: fixed; inset: 0; background: #fff; z-index: 60; display: flex; flex-direction: column; }
+  .goverlay[hidden] { display: none; }
+  .gbar {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--faint);
+    font-family: var(--mono); font-size: 13px; background: rgba(255,255,255,.97);
+  }
+  .gbar button {
+    appearance: none; border: 0; background: none; cursor: pointer;
+    font-family: var(--mono); font-size: 12.5px; color: var(--gray);
+    padding: 6px 10px; border-radius: 6px; white-space: nowrap;
+  }
+  .gbar button:hover { background: var(--faint); color: var(--ink); }
+  .gbar button.on { color: var(--accent); font-weight: 700; background: #fdf3e7; }
+  .gbar button.gclose { color: var(--ink); font-weight: 700; margin-right: 6px; }
+  .gbar .ghint { margin-left: auto; color: var(--gray); font-size: 12px; }
+  .gbody { flex: 1; overflow-y: auto; }
+
+  @media print {
+    html, body { background: #fff; }
+    .deck { height: auto; overflow: visible; }
+    .slide { position: relative; display: flex !important; height: 100vh; page-break-after: always; }
+    .navbar, .progress { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- 1. 타이틀 -->
+  <section class="slide">
+    <div class="slide-label">수퍼 테스트베드 인터랙티브 매핑 LAB <span class="sub">— 2주차</span></div>
+    <div class="body center">
+      <h1>Touchdesigner<br>Tutorial</h1>
+      <p style="font-family: var(--mono); font-size: clamp(20px,2.6vw,40px); margin-top: 2.5vh;" class="accent">&lt;MediaPipe&gt;</p>
+      <div class="net-row" style="justify-content: center; margin-top: 8vh; gap: 0; max-width: 720px; margin-left: auto; margin-right: auto;">
+        <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">webcam</span></div></div>
+        <div class="wire" style="transform:none;"></div>
+        <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">hand</span></div></div>
+        <div class="wire" style="transform:none;"></div>
+        <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">visual</span></div></div>
+      </div>
+      <p style="margin-top: 6vh;">신재영</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>2026.07.16</span></div>
+  </section>
+
+  <!-- 2. TOC -->
+  <section class="slide">
+    <div class="slide-label">Contents <span class="sub">— 오늘 우리가 가는 길</span></div>
+    <div class="body">
+      <div class="toc" id="toc"></div>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 3. 오늘의 미션 -->
+  <section class="slide">
+    <div class="slide-label">MediaPipe <span class="sub">— 오늘의 목표</span></div>
+    <div class="body center">
+      <p class="muted" style="font-family: var(--mono); letter-spacing:.12em; margin-bottom: 4vh;">MISSION</p>
+      <p class="big" style="font-size: clamp(34px, 4.6vw, 76px);">"웹캠이 <span class="accent wave">몸 컨트롤러</span>가 된다"</p>
+      <p class="muted" style="margin-top: 6vh;">수업이 끝날 때, 지난주 마우스를 꽂았던 그 자리에서<br>여러분의 손이 파티클과 소리를 흔들고 있으면 성공입니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 4. 오늘의 흐름 -->
+  <section class="slide">
+    <div class="slide-label">MediaPipe <span class="sub">— 오늘의 흐름</span></div>
+    <div class="body">
+      <div class="sched">
+        <div class="t">14:00</div><div class="what">지난주 복습 — 입력→정규화→매핑 <span class="muted">+ 오늘 데모 먼저 보기</span></div>
+        <div class="t">14:20</div><div class="what">MediaPipe 개념 + 플러그인 세팅 <span class="muted">(지금 이 슬라이드)</span></div>
+        <div class="t hot">14:40</div><div class="what hot">가이드 빌드 ① 손 트래킹 <span class="muted">— 검지끝 좌표 → 정규화 → 매핑</span></div>
+        <div class="t hot">15:30</div><div class="what hot">가이드 빌드 ② 포즈 트래킹 <span class="muted">— 같은 패턴, 몸 전체로</span></div>
+        <div class="t">16:00</div><div class="what muted">휴식</div>
+        <div class="t">16:15</div><div class="what">자유 확장 — 확장 미션 · 버디 페어</div>
+        <div class="t">17:45</div><div class="what">미니 공유 <span class="muted">(각자 화면 30초)</span></div>
+      </div>
+      <p class="muted" style="margin-top: 3vh;">오늘도 따라오다 막히면 그 자리에서 바로 손 들기 — 마침 오늘은 손 드는 게 곧 인터랙션입니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 5. 복습: 입력→정규화→매핑 -->
+  <section class="slide">
+    <div class="slide-label">Recap <span class="sub">— 지난주 그 그림, 그대로</span></div>
+    <div class="body">
+      <div class="pipe">
+        <div class="stage hot">
+          <span class="eyebrow">INPUT</span>
+          <span class="what">입력</span>
+          <span class="how"><s>마우스 · 오디오</s><br><strong class="accent" style="font-size:1.2em;">오늘: 손 · 몸</strong></span>
+        </div>
+        <div class="arrow">→</div>
+        <div class="stage">
+          <span class="eyebrow">NORMALIZE</span>
+          <span class="what">정규화</span>
+          <span class="how">0~1 공용어로 번역<br>Math · Lag · Filter</span>
+        </div>
+        <div class="arrow">→</div>
+        <div class="stage">
+          <span class="eyebrow">MAP</span>
+          <span class="what">매핑</span>
+          <span class="how">비주얼 · 사운드<br>파라미터에 꽂기</span>
+        </div>
+      </div>
+      <p style="margin-top: 4.5vh;" class="center">머리는 지난주와 똑같습니다. <strong>바뀌는 건 <span class="accent">입력 한 칸</span>뿐.</strong><br><span class="muted">다음 주 아두이노도 이 그림 그대로 갑니다 — 오늘이 두 번째 복습.</span></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 6. MediaPipe란 -->
+  <section class="slide">
+    <div class="slide-label">MediaPipe <span class="sub">— 웹캠 영상에서 몸의 좌표를 읽는 ML</span></div>
+    <div class="body">
+      <ul class="clean">
+        <li><strong>구글의 실시간 몸 인식 머신러닝</strong> — 웹캠 영상을 넣으면 손 · 몸 · 얼굴의 <strong>좌표(숫자)</strong>가 나옵니다</li>
+        <li><strong>손 21 · 포즈 33 · 얼굴 478 랜드마크</strong> — 관절 하나하나가 x, y, z 채널로</li>
+        <li><strong>TOP이 CHOP이 되는 순간</strong> — 영상(이미지)이 신호(숫자)로 번역되면, 지난주 배운 CHOP 손동작을 전부 재사용</li>
+        <li><strong>특별한 장비 0</strong> — 웹캠만 있으면 됨. 키넥트 없이 몸 트래킹, 집에서도 연습 가능</li>
+        <li><strong>무료 플러그인</strong> — <code>torinmb/mediapipe-touchdesigner</code>, 설치 없이 .toe 파일 하나 열면 끝</li>
+      </ul>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 7. 손 21 랜드마크 -->
+  <section class="slide">
+    <div class="slide-label">MediaPipe <span class="sub">— 손 하나 = 21개의 점 = 63개의 채널</span></div>
+    <div class="body">
+      <div class="hand-fig">
+        <svg viewBox="0 0 420 470" aria-label="손 21 랜드마크">
+          <g stroke="#3a3a40" stroke-width="3" fill="none">
+            <path d="M200,420 L140,380 L95,330 L65,285 L42,245"/>
+            <path d="M200,420 L150,250 L140,185 L135,135 L130,88"/>
+            <path d="M150,250 L200,240 L200,165 L200,110 L200,58"/>
+            <path d="M200,240 L250,250 L255,180 L258,128 L260,80"/>
+            <path d="M250,250 L298,270 L310,215 L318,172 L325,130"/>
+            <path d="M200,420 L298,270"/>
+          </g>
+          <g fill="#8fbf6f">
+            <circle cx="200" cy="420" r="11"/>
+            <circle cx="140" cy="380" r="8"/><circle cx="95"  cy="330" r="8"/><circle cx="65"  cy="285" r="8"/>
+            <circle cx="150" cy="250" r="8"/><circle cx="140" cy="185" r="8"/><circle cx="135" cy="135" r="8"/>
+            <circle cx="200" cy="240" r="8"/><circle cx="200" cy="165" r="8"/><circle cx="200" cy="110" r="8"/><circle cx="200" cy="58" r="8"/>
+            <circle cx="250" cy="250" r="8"/><circle cx="255" cy="180" r="8"/><circle cx="258" cy="128" r="8"/><circle cx="260" cy="80" r="8"/>
+            <circle cx="298" cy="270" r="8"/><circle cx="310" cy="215" r="8"/><circle cx="318" cy="172" r="8"/><circle cx="325" cy="130" r="8"/>
+            <circle cx="42"  cy="245" r="9"/>
+          </g>
+          <circle cx="130" cy="88" r="14" fill="#e8820c"/>
+          <text x="200" y="452" text-anchor="middle" font-family="Menlo, monospace" font-size="17" fill="#8d8d8d">0 wrist</text>
+          <text x="6" y="212" text-anchor="start" font-family="Menlo, monospace" font-size="17" fill="#8d8d8d">4 thumb_tip</text>
+          <text x="118" y="55" text-anchor="middle" font-family="Menlo, monospace" font-size="19" font-weight="700" fill="#e8820c">8 index_finger_tip ★</text>
+        </svg>
+        <div class="legend">
+          <div class="row"><span class="idx">0</span><span><code>h1:wrist</code> — 손목, 손 전체 위치의 기준</span></div>
+          <div class="row"><span class="idx">4</span><span><code>h1:thumb_tip</code> — 엄지끝. 검지끝과의 거리 = <strong>핀치</strong></span></div>
+          <div class="row"><span class="idx">8</span><span><code class="accent" style="background:#fdf3e7;">h1:index_finger_tip</code> — <strong class="accent">오늘의 주인공.</strong> 허공의 마우스 커서</span></div>
+          <div class="row"><span class="idx">12+</span><span>중지(12) · 약지(16) · 새끼(20) 끝 — 제스처 판별 재료</span></div>
+          <div class="row" style="margin-top:1.5vh;"><span class="idx">×3</span><span>점마다 <code>x</code> <code>y</code> <code>z</code> — 21점 × 3 = <strong>채널 63개가 CHOP으로</strong> 쏟아집니다. 그래서 첫 일은 <strong class="accent">필요한 채널만 골라내기(Select)</strong></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 8. 플러그인 세팅 -->
+  <section class="slide">
+    <div class="slide-label">MediaPipe <span class="sub">— 플러그인 세팅 (5분 컷)</span></div>
+    <div class="body">
+      <table class="keys">
+        <tr><th>순서</th><th>하는 것</th></tr>
+        <tr><td>1. 실행</td><td class="k"><code>MediaPipe TouchDesigner.toe</code> 열기 <span class="muted">— 설치 과정 없음, 이 파일이 곧 플러그인</span></td></tr>
+        <tr><td>2. 웹캠</td><td class="k">MediaPipe 컴포넌트 파라미터의 <strong>웹캠 드롭다운</strong>에서 카메라 선택</td></tr>
+        <tr><td>3. 모델 ON</td><td class="k"><strong>Hand Tracking</strong> 켜기 → 화면 오버레이에 손 스켈레톤 뜨면 성공</td></tr>
+        <tr><td>4. 데이터 확인</td><td class="k"><code>hand_tracking</code> COMP의 <strong>CHOP 출력</strong> 뷰어 열기 — 채널 63개 확인</td></tr>
+        <tr><td>5. 다이어트</td><td class="k">안 쓰는 모델(Face·Pose 등)은 <strong>OFF</strong> <span class="muted">— GPU 부하가 커서 필요한 것만 켭니다</span></td></tr>
+      </table>
+      <p class="muted" style="margin-top: 3vh;">⚠ 손이 자꾸 끊기면: 조명을 밝게 · 배경과 손 대비 확보 · 카메라에서 50cm~1m 거리. 트래킹 품질의 절반은 <strong>조명</strong>입니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 9. 가이드 빌드 ① 손 트래킹 -->
+  <section class="slide">
+    <div class="slide-label">01_Hand <span class="sub">— 가이드 빌드 ① · 14:40~15:30</span></div>
+    <div class="body">
+      <div class="roadmap">
+        <div class="step">
+          <span class="n">01</span><span class="op chop">Select</span>
+          <span class="desc">채널 63개 중 검지끝만 — 패턴 <code>h1:index_finger_tip:*</code></span><span class="tag">첫 성공!</span>
+        </div>
+        <div class="step">
+          <span class="n">02</span><span class="op chop">Math</span>
+          <span class="desc">거울 반전 + 쓰는 범위만 0~1로 리매핑 <span class="muted">(다음 장에서 자세히)</span></span><span class="tag">정규화</span>
+        </div>
+        <div class="step">
+          <span class="n">03</span><span class="op chop">Rename → Lag</span>
+          <span class="desc">채널명에 의미 부여 <code>handx</code> <code>handy</code> → 지터 다림질</span><span class="tag">정규화</span>
+        </div>
+        <div class="step hot">
+          <span class="n">04</span><span class="op chop">Null + Referencing</span>
+          <span class="desc"><code>op('null_hand')['handx']</code> → Circle Center에 — <strong>허공 마우스 완성</strong></span><span class="tag">★ 미션 절반</span>
+        </div>
+        <div class="step">
+          <span class="n">05</span><span class="op top">Feedback 재사용</span>
+          <span class="desc">지난주 잔상 네트워크에 꽂기 — <strong class="accent">손으로 그리는 빛</strong></span><span class="tag">매핑</span>
+        </div>
+      </div>
+      <p class="muted" style="margin-top: 3vh;">노드 완성: <code>Select → Math → Rename → Lag → Null</code> — 지난주 오디오 때와 같은 체인, 소스만 손. 완성본은 <code>week2.toe</code>의 <code>01_Hand</code>(빛) · <code>02_Theremin</code>(소리) — 상세 가이드: <a href="#g01" class="glink">01_Hand ↗</a> · <a href="#g02" class="glink">02_Theremin ↗</a></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 10. 정규화 디테일 -->
+  <section class="slide">
+    <div class="slide-label">01_Hand <span class="sub">— 이미 0~1인데 왜 또 정규화?</span></div>
+    <div class="body">
+      <p style="margin-bottom: 2.5vh;">MediaPipe는 친절하게 <strong>0~1로 좌표를 줍니다.</strong> 그런데 바로 꽂으면 세 가지가 어긋납니다 — 정규화는 "범위 맞추기"만이 아니라 <strong class="accent">신호를 쓸 수 있게 다듬는 일 전부</strong>입니다.</p>
+      <table>
+        <tr><th>문제</th><th>증상</th><th>처방</th></tr>
+        <tr><td><strong>거울이 아님</strong></td><td>손을 왼쪽으로 → 화면은 오른쪽으로</td><td><span class="chip chop">Math</span> <code>1 - x</code> 뒤집기</td></tr>
+        <tr><td><strong>지터(떨림)</strong></td><td>가만히 있어도 값이 파르르</td><td><span class="chip chop">Lag</span> 관성 · <span class="chip chop">Filter</span> 스무딩</td></tr>
+        <tr><td><strong>못 쓰는 구석</strong></td><td>화면 끝까지 손이 안 감 — 실제론 0.2~0.8만 씀</td><td><span class="chip chop">Math</span> From <code>0.2~0.8</code> → To <code>0~1</code></td></tr>
+      </table>
+      <p style="margin-top: 3vh;"><strong>Lag vs Filter, 언제 뭘?</strong> <span class="chip chop">Lag</span>는 목표를 <strong>따라가는 관성</strong>(반응은 즉각, 꼬리가 부드러움) · <span class="chip chop">Filter</span>는 최근 값의 <strong>평균</strong>(더 매끈, 대신 전체가 살짝 늦음). 커서엔 Lag, 배경처럼 느긋한 값엔 Filter — <strong class="accent">둘 다 걸고 귀 대신 눈으로 고르세요.</strong></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 11. 매핑: 파티클과 사운드 -->
+  <section class="slide">
+    <div class="slide-label">01_Hand <span class="sub">— 매핑: 같은 손, 두 개의 출구</span></div>
+    <div class="body">
+      <div class="td-panel">
+        <div class="net-row" style="margin-bottom: 4vh;">
+          <div class="node chop">
+            <div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">handx·handy</span></div>
+            <span class="opname">null_hand</span><span class="krname">정규화된 손</span>
+          </div>
+          <div class="wire"><span class="io">Referencing</span></div>
+          <div class="node top">
+            <div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">✸</span></div>
+            <span class="opname">particles</span><span class="krname">파티클 발생 위치</span>
+          </div>
+          <div class="wire"><span class="io">+ feedback</span></div>
+          <div class="node top">
+            <div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">out</span></div>
+            <span class="opname">null_out</span><span class="krname">손으로 그리는 빛</span>
+          </div>
+        </div>
+        <div class="net-row">
+          <div class="node chop">
+            <div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">handx·handy</span></div>
+            <span class="opname">null_hand</span><span class="krname">같은 손</span>
+          </div>
+          <div class="wire"><span class="io">y→pitch · x→volume</span></div>
+          <div class="node chop">
+            <div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">∿</span></div>
+            <span class="opname">audiooscillator</span><span class="krname">소리 만들기</span>
+          </div>
+          <div class="wire"><span class="io">Out</span></div>
+          <div class="node chop">
+            <div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">🔊</span></div>
+            <span class="opname">audiodeviceout</span><span class="krname">스피커</span>
+          </div>
+        </div>
+        <p class="annot" style="margin-top: 4vh;">null_hand 하나에서 두 갈래 ──▶ 손 올리면 음이 높아지고, 흔들면 빛이 흩어집니다. 허공 테레민.</p>
+      </div>
+      <p class="muted" style="margin-top: 3vh;">정규화까지 해두면 매핑은 <strong>갈아끼우기</strong>입니다 — 어제 마우스가 하던 일을 오늘 손이, 다음 주엔 센서가 합니다. <span class="muted">가이드: <a href="#g01" class="glink">01_Hand ↗</a> · <a href="#g02" class="glink">02_Theremin ↗</a></span></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 11b. 02_Theremin 빌드 -->
+  <section class="slide">
+    <div class="slide-label">02_Theremin <span class="sub">— 허공 테레민 빌드: 왜 이렇게</span></div>
+    <div class="body">
+      <div class="roadmap">
+        <div class="step">
+          <span class="n">01</span><span class="op chop">노드 복붙</span>
+          <span class="desc">01_Hand의 다섯 노드 그대로 (Ctrl/Cmd+C·V) — <strong>새 개념 0개</strong>. Lag만 <code>0.15</code>로</span><span class="tag">글라이드 맛</span>
+        </div>
+        <div class="step hot">
+          <span class="n">02</span><span class="op chop">게이트</span>
+          <span class="desc">helpers의 <code>h1:hand_active</code> → Lag <strong>비대칭</strong>(0.05/0.3) → <code>null_gate</code> — 손 없으면 무음, 뗄 때는 페이드아웃</span><span class="tag">★ 뚝 안 끊기게</span>
+        </div>
+        <div class="step hot">
+          <span class="n">03</span><span class="op chop">Audio Oscillator</span>
+          <span class="desc">Frequency = <code>220 * 2 ** ((1-handy) * 2)</code> — <strong>귀는 로그로 듣는다</strong>, 옥타브 = ×2라서 지수에</span><span class="tag">★ 손높이 = 음정</span>
+        </div>
+        <div class="step">
+          <span class="n">04</span><span class="op chop">Amp + Out</span>
+          <span class="desc">Amplitude = <code>active × handx × 0.4</code> (좌우 = 볼륨) → Audio Device Out(0.5)</span><span class="tag">완성</span>
+        </div>
+      </div>
+      <div class="td-panel" style="margin-top: 2.5vh;">
+        <pre style="font-family: var(--mono); color: #cfcfd6; font-size: clamp(12px, 1.4vw, 21px); line-height: 1.7; background: none; margin: 0;">handy(손 높이)   1.0 바닥   → 220 Hz (A3)
+                0.5 중간   → 440 Hz (A4)  <span style="color:#e8820c;">← ×2</span>
+                0.0 꼭대기 → 880 Hz (A5)  <span style="color:#e8820c;">← ×2</span>    두 옥타브의 허공 건반</pre>
+      </div>
+      <p class="muted" style="margin-top: 2.5vh;">노브: 기준음 = <code>220</code> · 음역 폭 = <code>* 2</code> · 성격 = Waveform(Sine 휘파람 · Saw 브라스) — 완성본 <code>/project1/02_Theremin</code> · <a href="#g02" class="glink">상세 가이드 ↗</a></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 12. 가이드 빌드 ② 포즈 -->
+  <section class="slide">
+    <div class="slide-label">03_Pose <span class="sub">— 가이드 빌드 ② · 15:30~16:00 · 같은 패턴, 몸 전체로</span></div>
+    <div class="body">
+      <div class="roadmap">
+        <div class="step">
+          <span class="n">01</span><span class="op chop">Pose ON</span>
+          <span class="desc">Hand OFF → Pose ON — 이번엔 <strong>몸 33개 랜드마크</strong> (어깨·팔꿈치·손목·무릎…)</span><span class="tag">전환 1분</span>
+        </div>
+        <div class="step">
+          <span class="n">02</span><span class="op chop">Select → … → Null</span>
+          <span class="desc">양쪽 손목(wrist) x, y 선택 → <strong>아까 만든 체인 복붙</strong> — 새 개념 0개</span><span class="tag">복습</span>
+        </div>
+        <div class="step hot">
+          <span class="n">03</span><span class="op chop">Math (두 채널 연산)</span>
+          <span class="desc">두 손목 <strong>거리</strong> = 팔 벌린 정도 → Scale에 꽂기 — <strong>팔을 벌리면 화면이 커진다</strong></span><span class="tag">★ 포즈 인터랙션</span>
+        </div>
+        <div class="step">
+          <span class="n">04</span><span class="op top">자유 매핑</span>
+          <span class="desc">머리 y → 색 · 몸 기울기 → 회전 · 점프 → 플래시 — 몸이 곧 파라미터 패널</span><span class="tag">자유 확장으로</span>
+        </div>
+      </div>
+      <p class="muted" style="margin-top: 3vh;">완성본 <code>week2.toe /project1/03_Pose</code> — <a href="#g03" class="glink">상세 가이드 ↗</a>. ★ 칠판의 그 그림 — 손이든 몸이든 <strong>입력→정규화→매핑</strong>, 다음 주 아두이노에서 세 번째로 만납니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 13. 확장 미션 -->
+  <section class="slide">
+    <div class="slide-label">Missions <span class="sub">— 확장 미션 (가이드 빌드를 마친 분)</span></div>
+    <div class="body">
+      <div class="missions">
+        <div class="mcard">
+          <span class="mnum">MISSION 01 — 두 손</span>
+          <h3>두 손 사이의 공간</h3>
+          <p><code>h1</code> · <code>h2</code> 두 손 검지끝 거리 → <code>Math</code>로 계산 → 줌/블러 세기. 두 손을 벌렸다 모으면 화면이 숨쉬게.</p>
+        </div>
+        <div class="mcard">
+          <span class="mnum">MISSION 02 — 제스처 트리거</span>
+          <h3>집으면 터진다</h3>
+          <p>helpers 출력의 <code>h1:pinch_midpoint:distance</code> → <code>Logic CHOP</code>(문턱값) → 핀치하는 순간 파티클 폭발·플래시.</p>
+        </div>
+        <div class="mcard">
+          <span class="mnum">MISSION 03 — 얼굴</span>
+          <h3>얼굴도 컨트롤러</h3>
+          <p>Face 모델 ON → 입 벌린 정도, 고개 기울기를 뽑아 매핑. 표정으로 연주하는 화면 — 조용히 윙크로 씬 전환.</p>
+        </div>
+        <div class="mcard">
+          <span class="mnum">MISSION 04 — 미니 브리프</span>
+          <h3>몸으로 연주하는 30초</h3>
+          <p>"악기를 들지 않고 소리와 빛을 동시에 연주하기" — 손·몸·얼굴 아무거나. 17:45 미니 공유에서 시연.</p>
+        </div>
+      </div>
+      <p class="muted" style="margin-top: 2.6vh;">완성본·가이드: 미션1 = <a href="#g04" class="glink">04_TwoHands ↗</a> · 미션2 = <a href="#g05" class="glink">05_Pinch ↗</a> · <strong class="accent">최종 미션</strong> = 가위바위보 3부작 — <a href="#g06" class="glink">06 모델 ↗</a> · <a href="#g07" class="glink">07 순수 CHOP ↗</a> · <a href="#g08" class="glink">08 Script ↗</a> (다음 챕터에서 차근차근). 미션 2까지 완료한 분은 주변에 막힌 분을 도와주세요 — 가르치는 것이 가장 빨리 배우는 방법입니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- RPS-1. 최종 미션 3부작 -->
+  <section class="slide">
+    <div class="slide-label">RPS <span class="sub">— 최종 미션: 가위바위보 심판, 세 가지 방법</span></div>
+    <div class="body">
+      <p style="margin-bottom: 2.5vh;">같은 문제를 세 번 다르게 풉니다 — <strong>도구가 사고를 어떻게 바꾸는지</strong> 몸으로 느끼는 미션.</p>
+      <table>
+        <tr><th>베이스</th><th>재료</th><th>성격</th><th>특징</th></tr>
+        <tr><td><span class="chip chop">06_RPS</span></td><td>학습된 제스처 확률</td><td>블랙박스 — 외운 것</td><td class="muted">브이를 수직으로 세워야만 가위</td></tr>
+        <tr><td><span class="chip chop">07_RPS_Chop</span></td><td>관절 xyz + CHOP 수학</td><td class="today">★ 화이트박스 — 계산</td><td>어느 방향이든 OK · 중간값이 다 보임</td></tr>
+        <tr><td><span class="chip chop">08_RPS_Script</span></td><td>같은 수학, 파이썬 30줄</td><td>화이트박스 — 압축</td><td class="muted">규칙 바꾸기 빠름 · 제스처 발명</td></tr>
+      </table>
+      <p style="margin-top: 3vh;">06이 눕힌 가위를 못 보는 이유: 분류기는 학습 사진을 <strong>외웠고</strong>, 사람들은 브이를 세워 찍으니까. <strong class="accent">외우지 않고 계산하면 방향이 사라집니다</strong> — 다음 장.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- RPS-2. 회전 불변량 -->
+  <section class="slide">
+    <div class="slide-label">RPS <span class="sub">— 07 순수 CHOP ① 회전 불변량: "펴짐"을 방향 없이 정의하기</span></div>
+    <div class="body">
+      <div class="td-panel">
+        <pre style="font-family: var(--mono); color: #cfcfd6; font-size: clamp(13px, 1.5vw, 22px); line-height: 1.65; background: none; margin: 0;">  펴진 손가락               굽힌 손가락
+      ● tip                    ● pip
+      │                       ╱ ● tip   <span style="color:#7a7a82;">← 접혀서 손목 쪽으로</span>
+      ● pip                  │
+  ────●──── wrist        ────●──── wrist
+
+  ratio = dist(tip, wrist) ÷ dist(pip, wrist)
+  <span style="color:#e8820c;">펴짐: ratio ≈ 1.25+       굽힘: ratio ≈ 0.95-</span></pre>
+        <p class="annot" style="margin-top: 3vh;">★ 손을 어떻게 돌려도 두 거리는 같이 돌아간다 ──▶ 비율은 불변 (회전 불변량)</p>
+      </div>
+      <p style="margin-top: 3vh;">왜 <strong>비율</strong>인가? 절대거리는 손 크기·카메라 거리에 오염되지만, 비율은 분모·분자에서 상쇄 — <strong class="accent">정규화의 기하학 버전.</strong> z까지 3D로 재면 카메라 쪽으로 접힌 손가락도 잡힙니다.</p>
+      <p class="muted" style="margin-top: 1.5vh;">판정은 펴진 손가락 개수: 0개 = 바위 · 딱 검지+중지 = 가위 · 4개 = 보.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- RPS-3. 손가락 블록 -->
+  <section class="slide">
+    <div class="slide-label">RPS <span class="sub">— 07 순수 CHOP ② 손가락 블록: 왜 이 노드들인가</span></div>
+    <div class="body">
+      <div class="roadmap">
+        <div class="step">
+          <span class="n">01</span><span class="op chop">Select ×2</span>
+          <span class="desc"><code>h1:index_finger_tip:*</code> · <code>h1:wrist:*</code> — 점 하나 = xyz 3채널짜리 <strong>벡터</strong></span><span class="tag">벡터로 시작</span>
+        </div>
+        <div class="step">
+          <span class="n">02</span><span class="op chop">Math: Subtract</span>
+          <span class="desc">2입력, Match by <strong>Index</strong> — 손목 기준 <strong>상대 벡터</strong> (채널명 달라서 순서 매칭)</span><span class="tag">기준점 옮기기</span>
+        </div>
+        <div class="step hot">
+          <span class="n">03</span><span class="op chop">Math: Length</span>
+          <span class="desc">Combine Channels = Length — <strong>√(x²+y²+z²) 피타고라스가 메뉴 하나</strong></span><span class="tag">★ 3D 거리</span>
+        </div>
+        <div class="step hot">
+          <span class="n">04</span><span class="op chop">Math: Divide</span>
+          <span class="desc">tip거리 ÷ pip거리 — <strong>비율 = 회전·크기 불변</strong>. Rename으로 채널명 = 손가락 이름</span><span class="tag">★ 불변량</span>
+        </div>
+        <div class="step">
+          <span class="n">05</span><span class="op chop">Range + Limit</span>
+          <span class="desc">0.95~1.25 → 0~1 "펴짐" + Clamp — <strong>Math Range는 클램프를 안 해서</strong> Limit이 뒷문 닫기</span><span class="tag">같은 노드: 정규화</span>
+        </div>
+      </div>
+      <p class="muted" style="margin-top: 3vh;">이 블록 하나 만들고 <strong>3번 복붙</strong>(중지·약지·새끼) → Merge → Lag → <code>null_fingers</code>. 완성본 <code>/project1/07_RPS_Chop</code> · <a href="#g07" class="glink">상세 가이드 ↗</a></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- RPS-4. 판정 -->
+  <section class="slide">
+    <div class="slide-label">RPS <span class="sub">— 07 순수 CHOP ③ 판정: 조건문 없이 곱셈으로</span></div>
+    <div class="body">
+      <div class="roadmap" style="margin-bottom: 2.5vh;">
+        <div class="step hot">
+          <span class="n">01</span><span class="op chop">Logic 이진화</span>
+          <span class="desc">펴짐 0~1 → <strong>0/1 스위치</strong> (Bounds 0.5~1.5) — 연속값을 곱하면 0.8⁴=0.41로 뭉개져서 판정 불능</span><span class="tag">★ 실제 버그였음</span>
+        </div>
+        <div class="step">
+          <span class="n">02</span><span class="op chop">Math 1-x</span>
+          <span class="desc">Range 0~1 → 1~0 = <strong>NOT</strong> ("굽힘")</span><span class="tag">뒤집기</span>
+        </div>
+        <div class="step hot">
+          <span class="n">03</span><span class="op chop">Merge + Multiply</span>
+          <span class="desc">0/1의 곱 = <strong>AND</strong> — 조건문이 필요 없다</span><span class="tag">★ 퍼지 논리</span>
+        </div>
+        <div class="step">
+          <span class="n">04</span><span class="op chop">active 곱하기</span>
+          <span class="desc"><code>hand_active</code>를 곱셈의 한 항으로 — 손 없으면 전부 0, <strong>게이트 공짜</strong></span><span class="tag">02 테레민의 그 게이트</span>
+        </div>
+      </div>
+      <div class="td-panel">
+        <pre style="font-family: var(--mono); color: #cfcfd6; font-size: clamp(13px, 1.55vw, 23px); line-height: 1.8; background: none; margin: 0;">바위 = (1-검지) × (1-중지) × (1-약지) × (1-새끼) × active
+보   =   검지  ×   중지  ×   약지  ×   새끼   × active
+가위 =   검지  ×   중지  × (1-약지) × (1-새끼) × active</pre>
+      </div>
+      <p class="muted" style="margin-top: 2.5vh;">마지막은 늘 하던 것: Merge → Lag(디바운스) → Null → Text TOP(argmax + 문턱 0.5). 미터(거리→비율→펴짐→판정)가 전부 뷰어로 보이는 게 CHOP 버전의 특권 — 코드로 압축한 버전은 <code>08_RPS_Script</code>.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 14. 다음 주 예고 -->
+  <section class="slide">
+    <div class="slide-label">Next <span class="sub">— 3주차 예고 (7/23)</span></div>
+    <div class="body center">
+      <p class="muted" style="margin-bottom: 3.5vh;">오늘 손 좌표를 꽂았던 그 자리에</p>
+      <p class="big" style="font-size: clamp(30px, 4vw, 66px);">다음 주엔 <span class="accent">물리 세계의 센서</span>가<br>들어옵니다</p>
+      <p class="muted" style="margin-top: 4vh;">아두이노 — 거리 · 기울기 · 노브가 CHOP 신호가 되는 날.<br>수요조사해주신 센서로 키트를 준비합니다. 같은 노드, 세 번째 소스.</p>
+      <p class="muted" style="margin-top: 3vh;">📷 다음 주는 <strong>프로젝트 소개 + 멘토링</strong>이 함께 있고, <strong>촬영</strong>이 있는 날입니다.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 15. 마무리 -->
+  <section class="slide">
+    <div class="slide-label">Wrap-up</div>
+    <div class="body">
+      <ul class="clean">
+        <li><strong>미니 공유</strong> — 각자 화면 30초씩, "몸으로 연주하는 30초" 환영</li>
+        <li><strong>집에서 해볼 것</strong> — 플러그인도 웹캠도 집에 있습니다. 오늘 체인에 매핑 하나만 더 얹어보기</li>
+        <li><strong>수업 자료 깃헙</strong> — <code>github.com/gamsasyo/STB_InteractiveMapping</code> 슬라이드 + <strong>베이스별 상세 가이드 5종</strong> (집에서 따라 만들 수 있게 파라미터까지 전부). TD 완성본 파일은 현장에서 공유합니다</li>
+        <li><strong class="accent">프로젝트 씨앗</strong> — 다음 주 프로젝트 소개가 시작됩니다. "내 몸/센서로 뭘 움직이고 싶은지" 한 문장만 품고 오세요</li>
+      </ul>
+      <p style="margin-top: 6vh;" class="big center">수고하셨습니다</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+</div>
+
+<nav class="navbar" id="navbar">
+  <div class="chapters" id="chapters"></div>
+  <div class="meta" id="meta"></div>
+</nav>
+<div class="progress" id="progress"></div>
+
+<script>
+  window.__initHash = location.hash.slice(1);
+  const slides = [...document.querySelectorAll('.slide')];
+  const bar = document.getElementById('progress');
+  const meta = document.getElementById('meta');
+  let cur = 0;
+
+  /* 챕터 정의: slide = 시작 슬라이드 인덱스(0-base) */
+  const chapters = [
+    { num: '00', title: '인트로',    desc: '오늘의 미션 · 흐름',                        slide: 0 },
+    { num: '01', title: '복습',      desc: '입력→정규화→매핑 — 입력 칸만 바뀐다',        slide: 4 },
+    { num: '02', title: 'MediaPipe', desc: '개념 · 손 21 랜드마크 · 플러그인 세팅',       slide: 5 },
+    { num: '03', title: '01_Hand',   desc: '가이드 빌드 ① — 손 → 빛(01_Hand) · 테레민(02_Theremin)', slide: 8 },
+    { num: '04', title: '03_Pose',   desc: '가이드 빌드 ② — 포즈 인터랙션 · 확장 미션',   slide: 12 },
+    { num: '05', title: 'RPS',       desc: '최종 미션 — 가위바위보 3부작 · 순수 CHOP 설계', slide: 14 },
+    { num: '06', title: '마무리',    desc: '다음 주 예고(아두이노) · 정리',              slide: 18 },
+  ];
+  const chapterOf = i => chapters.reduce((a, c, k) => i >= c.slide ? k : a, 0);
+
+  /* 목차 슬라이드 렌더 */
+  const toc = document.getElementById('toc');
+  chapters.forEach((c, k) => {
+    const el = document.createElement('div');
+    el.className = 'toc-item';
+    el.innerHTML = `<span class="cnum">${c.num}</span>` +
+      `<span class="ctitle">${c.title} &nbsp;<span class="muted">${c.desc}</span></span>` +
+      `<span class="cpage">p.${c.slide + 1}</span>`;
+    el.addEventListener('click', (e) => { e.stopPropagation(); show(c.slide); });
+    toc.appendChild(el);
+  });
+
+  /* 하단 네비게이션 렌더 */
+  const chBox = document.getElementById('chapters');
+  const navBtns = chapters.map((c, k) => {
+    const b = document.createElement('button');
+    b.textContent = `${c.num} ${c.title}`;
+    b.addEventListener('click', (e) => { e.stopPropagation(); show(c.slide); });
+    chBox.appendChild(b);
+    return b;
+  });
+
+  /* 푸터 페이지 번호 자동 갱신 */
+  slides.forEach((s, k) => {
+    const last = s.querySelector('.footer span:last-child');
+    if (last && /^\d+\s*\/\s*\d+$/.test(last.textContent.trim())) {
+      last.textContent = `${k + 1} / ${slides.length}`;
+    }
+  });
+
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, k) => s.classList.toggle('active', k === cur));
+    const ch = chapterOf(cur);
+    navBtns.forEach((b, k) => b.classList.toggle('on', k === ch));
+    meta.textContent = `${cur + 1} / ${slides.length} · ←→ 이동 · 1~7 챕터 · F 전체화면`;
+    bar.style.width = ((cur + 1) / slides.length * 100) + '%';
+    if (location.hash !== '#' + (cur + 1)) history.replaceState(null, '', '#' + (cur + 1));
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (/INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    if (!document.getElementById('goverlay').hidden) return;   // 가이드 리더 열림
+
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(cur + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(cur - 1); }
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End') show(slides.length - 1);
+    if (e.key >= '1' && e.key <= String(chapters.length)) show(chapters[+e.key - 1].slide);
+    if (e.key.toLowerCase() === 't') show(1);
+    if (e.key.toLowerCase() === 'f') {
+      document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    }
+  });
+
+  /* 슬라이드 이동은 키보드로만 — 예외: ?touch=1 (스테이션 모바일 뷰)일 때만 스와이프 허용 */
+  if (new URLSearchParams(location.search).has('touch')) {
+    let tx0 = null;
+    document.addEventListener('touchstart', e => tx0 = e.touches[0].clientX);
+    document.addEventListener('touchend', e => {
+      if (tx0 === null) return;
+      const dx = e.changedTouches[0].clientX - tx0;
+      if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1));
+      tx0 = null;
+    });
+  }
+
+  window.addEventListener('hashchange', () => {
+    const n = parseInt(location.hash.slice(1)) - 1;
+    if (!isNaN(n) && n !== cur) show(n);
+  });
+
+  show(parseInt(location.hash.slice(1)) - 1 || 0);
+</script>
+
+<div class="goverlay" id="goverlay" hidden>
+  <div class="gbar">
+    <button class="gclose" id="gclose">✕ 슬라이드로</button>
+    <button data-g="g01">01_Hand</button><button data-g="g02">02_Theremin</button><button data-g="g03">03_Pose</button><button data-g="g04">04_TwoHands</button><button data-g="g05">05_Pinch</button><button data-g="g06">06_RPS</button><button data-g="g07">07_RPS_Chop</button><button data-g="g08">08_RPS_Script</button>
+    <span class="ghint">ESC 닫기 · 베이스 가이드</span>
+  </div>
+  <div class="gbody"><div id="ghost"></div></div>
+</div>
+<template id="tpl-gcss"><style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :host {
+    --paper: #ffffff; --ink: #141414; --gray: #8d8d8d; --faint: #ececec;
+    --accent: #e8820c; --panel: #1d1d21; --panel-grid: #26262b; --node-body: #101012;
+    --fam-top: #a88bd4; --fam-chop: #8fbf6f; --wire: #7a7a82;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "JetBrains Mono", monospace;
+    --sans: -apple-system, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", sans-serif;
+  }
+  
+  :host { display: block; background: #fff; color: var(--ink); font-family: var(--sans); line-height: 1.65; }
+  .topnav {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+    padding: 10px 18px; background: rgba(255,255,255,.95);
+    border-bottom: 1px solid var(--faint); backdrop-filter: blur(6px);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .topnav a { color: var(--gray); text-decoration: none; padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+  .topnav a:hover { background: var(--faint); color: var(--ink); }
+  .topnav a.on { color: var(--accent); font-weight: 700; background: #fdf3e7; }
+  .topnav a.back { color: var(--ink); font-weight: 700; margin-right: 8px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 90px; }
+  .crumb { font-family: var(--mono); font-size: 13px; color: var(--gray); margin-bottom: 14px; }
+  .crumb b { color: var(--accent); }
+  h1 { font-family: var(--mono); font-size: clamp(30px, 5vw, 46px); letter-spacing: -0.02em; margin-bottom: 10px; }
+  .lead { font-size: clamp(17px, 2.2vw, 21px); color: #444; margin-bottom: 18px; }
+  .lead strong { color: var(--accent); }
+  .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 34px; }
+  .meta span { font-family: var(--mono); font-size: 12.5px; color: var(--gray);
+    border: 1px solid var(--faint); border-radius: 999px; padding: 4px 12px; }
+  h2 { font-size: clamp(21px, 2.6vw, 27px); font-weight: 800; letter-spacing: -0.01em;
+    margin: 46px 0 16px; padding-top: 14px; border-top: 2px solid var(--ink); }
+  h2 .no { font-family: var(--mono); color: var(--accent); margin-right: 8px; }
+  p { font-size: clamp(15px, 1.9vw, 17px); margin-bottom: 12px; }
+  .muted { color: var(--gray); }
+  .accent { color: var(--accent); }
+  code { font-family: var(--mono); background: var(--faint); padding: .1em .4em; border-radius: 5px; font-size: .88em; }
+  pre { font-family: var(--mono); font-size: 13.5px; line-height: 1.7; background: var(--panel); color: #cfcfd6;
+    border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 14px 0; }
+  pre .c { color: #7a7a82; } pre .o { color: var(--accent); } pre .g { color: var(--fam-chop); }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0 22px; }
+  th, td { padding: 10px 12px; font-size: 14.5px; text-align: left; border-bottom: 1px solid var(--faint); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 12px; color: var(--gray); font-weight: 500; letter-spacing: .06em; border-bottom: 2px solid var(--ink); }
+  td.k { font-family: var(--mono); white-space: nowrap; font-weight: 700; }
+  .chip { display: inline-block; font-family: var(--mono); font-weight: 700; font-size: 12.5px;
+    padding: .18em .55em; border-radius: 6px; }
+  .chip.top { background: var(--fam-top); color: #1c1428; }
+  .chip.chop { background: var(--fam-chop); color: #16210f; }
+  /* TD network panel */
+  .td-panel { background:
+      repeating-linear-gradient(0deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      repeating-linear-gradient(90deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      var(--panel);
+    border-radius: 12px; padding: 28px 22px; overflow-x: auto; margin: 16px 0 8px; }
+  .net-row { display: flex; align-items: center; min-width: max-content; }
+  .net-row + .net-row { margin-top: 26px; }
+  .node { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .node .chassis { width: 118px; height: 56px; background: var(--node-body);
+    border: 2px solid var(--fam, var(--fam-top)); border-radius: 6px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.35); }
+  .node .chassis::before, .node .chassis::after { content: ""; position: absolute; top: 18%; bottom: 18%;
+    width: 4px; background: var(--fam, var(--fam-top)); opacity: .85; border-radius: 2px; }
+  .node .chassis::before { left: -3px; } .node .chassis::after { right: -3px; }
+  .node .fam-tag { position: absolute; top: 4px; left: 7px; font-family: var(--mono); font-size: 8.5px;
+    color: var(--fam, var(--fam-top)); letter-spacing: .08em; }
+  .node .viewer { font-family: var(--mono); font-size: 12px; color: #cfcfd6; }
+  .node .opname { font-family: var(--mono); font-size: 11.5px; color: #b9b9c2; }
+  .node .krname { font-size: 11px; color: #77777f; }
+  .node.chop { --fam: var(--fam-chop); } .node.top { --fam: var(--fam-top); }
+  .wire { width: 42px; height: 2px; background: var(--wire); position: relative; margin: 0 3px;
+    transform: translateY(-14px); flex: 0 0 auto; }
+  .wire::after { content: ""; position: absolute; right: -1px; top: 50%; transform: translateY(-50%);
+    border-left: 7px solid var(--wire); border-top: 4.5px solid transparent; border-bottom: 4.5px solid transparent; }
+  .annot { font-family: var(--mono); color: var(--accent); font-size: 13px; line-height: 1.7; margin-top: 18px; }
+  /* build steps */
+  .bstep { display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding: 20px 0; border-bottom: 1px solid var(--faint); }
+  .bstep .sn { font-family: var(--mono); font-size: 19px; font-weight: 700; color: var(--accent); padding-top: 2px; }
+  .bstep h3 { font-size: 17.5px; font-weight: 800; margin-bottom: 6px; }
+  .bstep h3 .chip { margin-right: 6px; vertical-align: 2px; }
+  .bstep p { font-size: 15px; margin-bottom: 8px; }
+  .bstep table { margin: 10px 0 4px; }
+  .why { background: #fdf3e7; border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0;
+    padding: 10px 14px; font-size: 14px; margin: 10px 0 4px; }
+  .why b { color: var(--accent); }
+  ul.plain { margin: 6px 0 12px 2px; list-style: none; }
+  ul.plain li { font-size: 15px; padding-left: 1.4em; position: relative; margin-bottom: 7px; }
+  ul.plain li::before { content: ""; position: absolute; left: 0; top: .5em; width: .5em; height: .5em;
+    border-radius: 2px; background: var(--accent); }
+  .pagenav { display: flex; justify-content: space-between; margin-top: 60px; padding-top: 20px;
+    border-top: 2px solid var(--ink); font-family: var(--mono); font-size: 14px; }
+  .pagenav a { color: var(--ink); text-decoration: none; font-weight: 700; }
+  .pagenav a:hover { color: var(--accent); }
+  .pagenav .sub { display: block; font-size: 12px; color: var(--gray); font-weight: 400; margin-top: 3px; }
+  @media (max-width: 640px) { .bstep { grid-template-columns: 32px 1fr; } }
+</style></template>
+<template id="tpl-g01"><div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>01_Hand</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/01_Hand</b></div>
+
+<h1>01_Hand</h1>
+<p class="lead">검지 끝이 <strong>허공 마우스</strong>가 되고, 그 궤적이 잔상으로 남는다 — <strong>손으로 그리는 빛</strong>.</p>
+<div class="meta"><span>가이드 빌드 ①</span><span>노드 11개</span><span>CHOP 5 + TOP 5</span><span>난이도 ●○○</span></div>
+
+<h2><span class="no">A</span>완성 네트워크</h2>
+<div class="td-panel">
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">63→2</span></div><span class="opname">select_tip</span><span class="krname">검지끝만</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">0~1</span></div><span class="opname">math_range</span><span class="krname">범위 리매핑</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">handx·y</span></div><span class="opname">rename_hand</span><span class="krname">이름 부여</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">~</span></div><span class="opname">lag_smooth</span><span class="krname">지터 다림질</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">out</span></div><span class="opname">null_hand</span><span class="krname">출구 ★</span></div>
+  </div>
+  <div class="net-row">
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">●</span></div><span class="opname">circle_dot</span><span class="krname">커서</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">+</span></div><span class="opname">add_trail</span><span class="krname">합치기</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">out</span></div><span class="opname">null_out</span><span class="krname">완성</span></div>
+  </div>
+  <div class="net-row">
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">⟲</span></div><span class="opname">feedback1</span><span class="krname">직전 프레임</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">×0.93</span></div><span class="opname">level_fade</span><span class="krname">서서히 지움</span></div>
+  </div>
+  <p class="annot">윗줄 = 정규화 노드(CHOP) · 아랫줄 = 잔상 루프(TOP): feedback1 → level_fade → add_trail의 2번 입력, feedback1의 Target은 add_trail</p>
+</div>
+<div class="why"><b>노드.</b> 이번 주 모든 베이스는 같은 다섯 마디 — <code>Select → Math → Rename → Lag → Null</code>.
+소스(검지·손목·거리)와 매핑(빛·소리·블러)만 바뀝니다. 지난주 오디오 체인과도 같은 구조.</div>
+
+<h2><span class="no">B</span>단계별 빌드</h2>
+
+<div class="bstep"><div class="sn">01</div><div>
+<h3>데이터부터 눈으로 확인</h3>
+<p><code>hand_tracking2</code> 안의 <code>normalized_data</code> CHOP 뷰어를 열고 손을 흔들어보세요. <strong>21개 점 × x·y·z = 채널 63개</strong>가 출렁이면 준비 완료. 값은 이미 0~1로 정규화되어 나옵니다.</p>
+</div></div>
+
+<div class="bstep"><div class="sn">02</div><div>
+<h3><span class="chip chop">Select CHOP</span>select_tip — 63개 중 2개만</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">CHOPs</td><td><code>../hand_tracking2/normalized_data</code></td></tr>
+<tr><td class="k">Channel Names</td><td><code>h1:index_finger_tip:x h1:index_finger_tip:y</code></td></tr>
+</table>
+<div class="why"><b>왜?</b> 매핑에 필요한 건 검지끝 x, y 딱 두 개. 나머지 61개는 소음입니다. <code>h1</code> = 첫 번째로 잡힌 손(왼/오 보장 없음). z까지 쓰고 싶으면 패턴 <code>h1:index_finger_tip:*</code>.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">03</div><div>
+<h3><span class="chip chop">Math CHOP</span>math_range — 쓰는 범위만 0~1로</h3>
+<table>
+<tr><th>파라미터 (Range 페이지)</th><th>값</th></tr>
+<tr><td class="k">From Range</td><td><code>0.15</code> ~ <code>0.85</code></td></tr>
+<tr><td class="k">To Range</td><td><code>0</code> ~ <code>1</code></td></tr>
+</table>
+<div class="why"><b>왜?</b> 손은 화면 가장자리까지 못 갑니다 — 실제로는 0.15~0.85만 씀. 그 구간을 0~1로 늘려야 커서가 화면 전체를 커버합니다. <b>이 두 값이 감도 노브.</b><br>
+거울 반전은? MediaPipe COMP의 <code>Horizontal Flip</code>이 이미 처리 중이라 여기선 안 건드립니다.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">04</div><div>
+<h3><span class="chip chop">Rename CHOP</span>rename_hand — 채널명에 의미 부여</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">From</td><td><code>h1:index_finger_tip:x h1:index_finger_tip:y</code></td></tr>
+<tr><td class="k">To</td><td><code>handx handy</code></td></tr>
+</table>
+<div class="why"><b>왜?</b> 이후 익스프레션이 <code>op('null_hand')['handx']</code>처럼 <b>읽히게</b> 됩니다. 네트워크가 커질수록 이 습관이 생명.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">05</div><div>
+<h3><span class="chip chop">Lag CHOP</span>lag_smooth → <span class="chip chop">Null CHOP</span>null_hand</h3>
+<p>Lag <code>0.12 / 0.12</code>. 가만히 있어도 파르르 떨리는 지터를 다림질합니다. 마지막에 Null을 붙이면 <strong>정규화 노드 완성</strong> — 매핑은 전부 이 null_hand에서 뽑아 씁니다.</p>
+<div class="why"><b>Lag vs Filter?</b> Lag = 목표를 따라가는 <b>관성</b>(즉각 반응, 부드러운 꼬리) · Filter = 최근 값의 <b>평균</b>(더 매끈, 전체가 살짝 늦음). 커서엔 Lag. 둘 다 걸어보고 눈으로 고르세요.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">06</div><div>
+<h3><span class="chip top">Circle TOP</span>circle_dot — 허공 커서</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">Resolution</td><td><code>1280 × 720</code> (Common 페이지, Output Resolution = Custom)</td></tr>
+<tr><td class="k">Radius X</td><td><code>0.02</code> &nbsp;<span class="muted">(Radius Y에는 <code>me.par.radiusx</code> — 항상 정원)</span></td></tr>
+<tr><td class="k">Center X</td><td><code>op('null_hand')['handx'] - 0.5</code></td></tr>
+<tr><td class="k">Center Y</td><td><code>op('null_hand')['handy'] * -1 + 0.5</code> &nbsp;<span class="muted">(= 0.5 - handy)</span></td></tr>
+<tr><td class="k">Softness</td><td><code>0.005</code></td></tr>
+</table>
+<div class="why"><b>좌표계 번역.</b> MediaPipe는 <b>왼쪽 위가 (0,0)</b>, 아래로 갈수록 y 증가. TD의 Circle은 <b>화면 중앙이 (0,0)</b>, 위로 갈수록 +.
+그래서 x는 <code>-0.5</code>(중심 이동), y는 <code>0.5 - handy</code>(뒤집기 + 중심 이동).</div>
+<pre>MediaPipe            TD Circle
+(0,0)┌──────┐        ┌──────┐
+     │      │   →    │ (0,0)│   x' = x - 0.5
+     │      │        │  <span class="o">+</span>   │   y' = 0.5 - y
+     └──────┘(1,1)   └──────┘</pre>
+</div></div>
+
+<div class="bstep"><div class="sn">07</div><div>
+<h3><span class="chip top">Feedback + Level + Add</span>잔상 루프 — 지난주 그 구조</h3>
+<ul class="plain">
+<li><code>circle_dot</code> → <code>add_trail</code>의 <b>1번 입력</b></li>
+<li><code>feedback1</code> → <code>level_fade</code> → <code>add_trail</code>의 <b>2번 입력</b></li>
+<li><code>feedback1</code>의 <b>Target TOP = add_trail</b> (루프를 닫는 열쇠)</li>
+<li><code>level_fade</code>의 <b>Opacity = 0.93</b> → 잔상 길이 노브</li>
+<li><code>add_trail</code> → <code>null_out</code>, 뷰어 켜기 — 완성!</li>
+</ul>
+<div class="why"><b>원리.</b> Feedback은 <b>직전 프레임의 add_trail</b>을 기억했다가 되돌려줍니다. 매 프레임 93%로 어두워지며 쌓이니까 → 움직인 궤적이 꼬리처럼 남습니다. 1.0이면 화면이 영영 안 지워져요.</div>
+</div></div>
+
+<h2><span class="no">C</span>조절 노브</h2>
+<table>
+<tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
+<tr><td>커서 감도</td><td class="k">math_range · From Range</td><td>구간을 좁히면 민감해짐 (0.25~0.75)</td></tr>
+<tr><td>반응 속도 vs 부드러움</td><td class="k">lag_smooth · Lag</td><td>0.05 = 즉각 · 0.3 = 느긋</td></tr>
+<tr><td>잔상 길이</td><td class="k">level_fade · Opacity</td><td>0.85 = 짧게 · 0.97 = 길게</td></tr>
+<tr><td>붓 굵기</td><td class="k">circle_dot · Radius X</td><td>0.005 = 펜 · 0.06 = 붓</td></tr>
+</table>
+
+<h2><span class="no">D</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>트래킹이 자꾸 끊겨요</strong> — 조명을 밝게, 배경과 손의 대비 확보, 카메라에서 50cm~1m. 품질의 절반은 조명입니다.</li>
+<li><strong>값이 아예 안 움직여요</strong> — <code>hand_tracking2/helpers</code>의 <code>h1:hand_active</code>가 1인지 먼저 확인. 0이면 손 인식 자체가 안 되는 것.</li>
+<li><strong>Select에 노란 경고</strong> — CHOPs 경로는 <strong>노드의 부모 네트워크 기준</strong>입니다. 베이스 안에서는 <code>../hand_tracking2/…</code> (../../ 아님!)</li>
+</ul>
+
+<h2><span class="no">E</span>더 가보기</h2>
+<ul class="plain">
+<li><strong>두 번째 커서</strong> — 체인 복붙, Select만 <code>h1:middle_finger_tip:*</code>로. 검지＋중지 두 붓.</li>
+<li><strong>깊이로 굵기</strong> — <code>h1:index_finger_tip:z</code>를 뽑아 Radius에. 손을 앞으로 밀면 굵은 붓.</li>
+<li><strong>색 입히기</strong> — add_trail 뒤에 HSV Adjust, Hue에 <code>op('null_hand')['handx'] * 360</code>.</li>
+<li><strong>소리 얹기</strong> — 같은 null_hand로 <a href="week2_02_theremin.html">02_Theremin</a> 시작.</li>
+</ul></template>
+<template id="tpl-g02"><div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>02_Theremin</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/02_Theremin</b></div>
+
+<h1>02_Theremin</h1>
+<p class="lead">손 높이가 <strong>음정</strong>, 손 좌우가 <strong>볼륨</strong> — 악기를 들지 않고 연주하는 <strong>허공 테레민</strong>.</p>
+<div class="meta"><span>가이드 빌드 ① 사운드</span><span>노드 10개</span><span>01_Hand 체인 재사용</span><span>난이도 ●●○</span></div>
+
+<h2><span class="no">A</span>완성 네트워크</h2>
+<div class="td-panel">
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">검지끝</span></div><span class="opname">select_tip</span><span class="krname">01_Hand과 동일</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">…</span></div><span class="opname">math→rename→lag</span><span class="krname">같은 노드</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">out</span></div><span class="opname">null_hand</span><span class="krname">손 좌표</span></div>
+  </div>
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">0/1</span></div><span class="opname">select_active</span><span class="krname">손 있나?</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">~</span></div><span class="opname">lag_gate</span><span class="krname">페이드</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">out</span></div><span class="opname">null_gate</span><span class="krname">게이트</span></div>
+  </div>
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">∿</span></div><span class="opname">osc_voice</span><span class="krname">소리 만들기</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">🔊</span></div><span class="opname">audio_out</span><span class="krname">스피커</span></div>
+  </div>
+  <p class="annot">osc_voice는 와이어 입력이 없다 — null_hand와 null_gate를 익스프레션으로 Referencing. 신호가 아니라 "파라미터"로 꽂는 매핑.</p>
+</div>
+<div class="why"><b>노드.</b> 이번 주 모든 베이스는 같은 다섯 마디 — <code>Select → Math → Rename → Lag → Null</code>.
+소스(검지·손목·거리)와 매핑(빛·소리·블러)만 바뀝니다. 지난주 오디오 체인과도 같은 구조.</div>
+
+<h2><span class="no">B</span>단계별 빌드</h2>
+
+<div class="bstep"><div class="sn">01</div><div>
+<h3>01_Hand의 노드 다섯 개를 복붙</h3>
+<p><code>select_tip → math_range → rename_hand → lag_smooth → null_hand</code>를 그대로 복사해오세요 (드래그 선택 → Ctrl/Cmd+C·V). <strong>새 개념 0개</strong> — 그게 포인트입니다.</p>
+<div class="why"><b>딱 하나 조정.</b> lag_smooth를 <code>0.15</code>로 살짝 올리기 — 음정이 <b>미끄러지듯</b> 이어지는 글라이드(포르타멘토) 맛이 생깁니다. 테레민의 그 느낌.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">02</div><div>
+<h3><span class="chip chop">Select CHOP</span>select_active — 손이 있을 때만</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">CHOPs</td><td><code>../hand_tracking2/helpers</code></td></tr>
+<tr><td class="k">Channel Names</td><td><code>h1:hand_active</code></td></tr>
+</table>
+<p>이어서 <span class="chip chop">Lag</span> <code>lag_gate</code> (<code>0.05 / 0.3</code>) → <span class="chip chop">Null</span> <code>null_gate</code>.</p>
+<div class="why"><b>왜 게이트?</b> <code>hand_active</code>는 손이 잡히면 1, 없으면 0. 이걸 볼륨에 곱하면 <b>손이 없을 때 자동 무음</b>. Lag을 비대칭(켜질 땐 0.05로 빠르게, 꺼질 땐 0.3으로 천천히)으로 걸면 뚝 끊기지 않고 페이드아웃됩니다.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">03</div><div>
+<h3><span class="chip chop">Audio Oscillator CHOP</span>osc_voice — 소리 그 자체</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">Waveform</td><td><code>Sine</code> (일단)</td></tr>
+<tr><td class="k">Base Frequency</td><td><code>220 * 2 ** ((1 - op('null_hand')['handy']) * 2)</code></td></tr>
+<tr><td class="k">Amplitude</td><td><code>op('null_gate')['h1:hand_active'] * op('null_hand')['handx'] * 0.4</code></td></tr>
+</table>
+<div class="why"><b>왜 2의 거듭제곱?</b> 귀는 로그로 듣습니다 — 한 옥타브 = 주파수 <b>×2</b>. 손 높이를 지수에 넣어야 위아래 움직임이 균등한 음정 변화로 들립니다.</div>
+<pre>handy(손 높이)   1.0 ── 바닥  → 220 Hz  (A3, 낮은 라)
+                0.5 ── 중간  → 440 Hz  (A4) <span class="c">← ×2</span>
+                0.0 ── 꼭대기 → 880 Hz  (A5) <span class="c">← ×2</span>
+볼륨 = hand_active(0/1) × handx(왼쪽 0 … 오른쪽 1) × 0.4</pre>
+</div></div>
+
+<div class="bstep"><div class="sn">04</div><div>
+<h3><span class="chip chop">Audio Device Out CHOP</span>audio_out — 스피커로</h3>
+<p><code>osc_voice</code>를 와이어로 연결, Volume <code>0.5</code>. 손을 들어 올려보세요 — <strong>음이 올라갑니다.</strong> 오른쪽으로 밀면 커지고, 손을 내리면(화면에서 빼면) 소리가 스르르 사라집니다.</p>
+</div></div>
+
+<h2><span class="no">C</span>조절 노브</h2>
+<table>
+<tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
+<tr><td>기준음</td><td class="k">frequency의 220</td><td>110 = 한 옥타브 아래 · 440 = 위</td></tr>
+<tr><td>음역 폭</td><td class="k">frequency의 * 2</td><td>* 3 = 세 옥타브 (더 드라마틱)</td></tr>
+<tr><td>소리 성격</td><td class="k">Waveform</td><td>Sine = 순한 휘파람 · Saw = 브라스 · Square = 게임기</td></tr>
+<tr><td>글라이드</td><td class="k">lag_smooth</td><td>0.05 = 또렷 · 0.4 = 끈적한 포르타멘토</td></tr>
+</table>
+
+<h2><span class="no">D</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>소리가 아예 안 나요</strong> — ① 손이 화면에 있나요? (amp는 hand_active에 곱해져 있음) ② 손이 왼쪽 끝이면 handx=0이라 무음 ③ audio_out의 Device가 맞는 출력장치인지.</li>
+<li><strong>음정이 부들부들 떨려요</strong> — lag_smooth를 올리세요. 지터가 그대로 음정 비브라토가 되는 중.</li>
+<li><strong>연습실이 시끄러워요</strong> — 이어폰… 혹은 Volume 0.2. 서로의 테레민이 싸우면 아수라장 ㅎㅎ</li>
+</ul>
+
+<h2><span class="no">E</span>더 가보기</h2>
+<ul class="plain">
+<li><strong>음계 스냅</strong> — 연속 음정 대신 반음 단위로: <code>220 * 2 ** (round((1 - op('null_hand')['handy']) * 24) / 12)</code>. round()가 반음(1/12 옥타브) 격자에 스냅시켜 줍니다.</li>
+<li><strong>비브라토</strong> — 다른 LFO CHOP(5~7Hz, 작은 진폭)를 frequency에 더하기.</li>
+<li><strong>두 손 연주</strong> — h2 체인을 만들어 두 번째 오실레이터 = 화음.</li>
+<li><strong>빛과 함께</strong> — <a href="week2_01_hand.html">01_Hand</a>와 동시에 켜면 연주가 그림이 됩니다. 미니 공유각.</li>
+</ul></template>
+<template id="tpl-g03"><div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>03_Pose</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/03_Pose</b></div>
+
+<h1>03_Pose</h1>
+<p class="lead">이번엔 손이 아니라 <strong>몸 전체 33개 랜드마크</strong>. 양 손목 사이 거리로 — <strong>팔을 벌리면 화면이 커진다.</strong></p>
+<div class="meta"><span>가이드 빌드 ②</span><span>노드 8개</span><span>같은 노드 + 새 개념 1개</span><span>난이도 ●●○</span></div>
+
+<h2><span class="no">A</span>완성 네트워크</h2>
+<div class="td-panel">
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">2ch</span></div><span class="opname">select_wrists</span><span class="krname">양 손목 x</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">L−R</span></div><span class="opname">math_diff</span><span class="krname">빼기</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">|x|</span></div><span class="opname">math_abs</span><span class="krname">절대값+범위</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">spread</span></div><span class="opname">rename→lag</span><span class="krname">이름·다림질</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">out</span></div><span class="opname">null_pose</span><span class="krname">출구 ★</span></div>
+  </div>
+  <div class="net-row">
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">●→◯</span></div><span class="opname">circle_breathe</span><span class="krname">숨쉬는 원</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">out</span></div><span class="opname">null_out</span><span class="krname">완성</span></div>
+  </div>
+  <p class="annot">Select → Math → Rename → Lag → Null — 소스가 hand→pose로 바뀌어도 노드는 그대로. 새 개념은 Math 하나(두 채널을 한 채널로).</p>
+</div>
+<div class="why"><b>노드.</b> 이번 주 모든 베이스는 같은 다섯 마디 — <code>Select → Math → Rename → Lag → Null</code>.
+소스(검지·손목·거리)와 매핑(빛·소리·블러)만 바뀝니다. 지난주 오디오 체인과도 같은 구조.</div>
+
+<h2><span class="no">B</span>단계별 빌드</h2>
+
+<div class="bstep"><div class="sn">01</div><div>
+<h3>pose_tracking 준비 (이 파일엔 이미 되어 있음)</h3>
+<p>새로 만들 때는: <code>release/toxes/pose_tracking.tox</code>를 <code>/project1</code>에 드래그 → MediaPipe COMP의 <strong>pose 출력</strong>과 와이어로 연결 → MediaPipe COMP에서 <code>Detect poses</code> ON.</p>
+<div class="why"><b>채널명 주의.</b> 포즈는 손과 달리 프리픽스가 없습니다 — <code>left_wrist:x</code>, <code>right_shoulder:y</code> 식. 총 33점: nose, eyes, ears, shoulders, elbows, <b>wrists</b>, hips, knees, ankles… <code>normalized_data</code> 뷰어에서 직접 확인하는 습관!</div>
+</div></div>
+
+<div class="bstep"><div class="sn">02</div><div>
+<h3><span class="chip chop">Select CHOP</span>select_wrists — 양 손목 x만</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">CHOPs</td><td><code>../pose_tracking/normalized_data</code></td></tr>
+<tr><td class="k">Channel Names</td><td><code>left_wrist:x right_wrist:x</code></td></tr>
+</table>
+</div></div>
+
+<div class="bstep"><div class="sn">03</div><div>
+<h3><span class="chip chop">Math CHOP</span>math_diff — ★새 개념: 두 채널을 한 채널로</h3>
+<table>
+<tr><th>파라미터 (OP 페이지)</th><th>값</th></tr>
+<tr><td class="k">Combine Channels</td><td><code>Subtract</code></td></tr>
+</table>
+<div class="why"><b>여기가 오늘의 점프.</b> 지금까지 Math는 채널을 "각자" 바꿨는데(범위 리매핑), Combine Channels는 <b>채널들 사이의 관계</b>를 계산합니다. 왼손목 − 오른손목 = 채널 2개가 "차이" 1개로. <b>관계가 새 신호가 되는 순간.</b></div>
+<pre>left_wrist:x  0.85 ┐
+                   ├─ Subtract → 0.63  <span class="c">(부호는 방향일 뿐)</span>
+right_wrist:x 0.22 ┘</pre>
+</div></div>
+
+<div class="bstep"><div class="sn">04</div><div>
+<h3><span class="chip chop">Math CHOP</span>math_abs — 절대값 + 범위</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">Channel Pre OP</td><td><code>Positive</code> (절대값)</td></tr>
+<tr><td class="k">From Range → To Range</td><td><code>0 ~ 0.7</code> → <code>0 ~ 1</code></td></tr>
+</table>
+<div class="why"><b>왜 절대값?</b> 어느 손이 왼쪽에 있든 "벌어진 정도"만 원하니까 부호(방향)를 버립니다. 0.7은 화면 안에서 팔을 활짝 벌렸을 때의 실측값 — <b>사람·카메라 거리마다 달라서 현장 캘리브레이션 대상.</b></div>
+</div></div>
+
+<div class="bstep"><div class="sn">05</div><div>
+<h3><span class="chip chop">Rename → Lag → Null</span>노드 마무리</h3>
+<p>Rename: <code>*</code> → <code>spread</code> · Lag <code>0.2</code>(몸은 손보다 느긋하게) · <code>null_pose</code>. 이제 <code>op('null_pose')['spread']</code> = 0(모음) ~ 1(활짝).</p>
+</div></div>
+
+<div class="bstep"><div class="sn">06</div><div>
+<h3><span class="chip top">Circle TOP</span>circle_breathe — 매핑</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">Resolution</td><td><code>1280 × 720</code></td></tr>
+<tr><td class="k">Radius X</td><td><code>0.05 + op('null_pose')['spread'] * 0.38</code></td></tr>
+<tr><td class="k">Radius Y</td><td><code>me.par.radiusx</code></td></tr>
+</table>
+<p>팔을 모으면 작은 점, 활짝 벌리면 화면을 채우는 원. <strong>몸이 파라미터 패널이 됐습니다.</strong></p>
+</div></div>
+
+<h2><span class="no">C</span>조절 노브</h2>
+<table>
+<tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
+<tr><td>팔 스팬 캘리브레이션</td><td class="k">math_abs · From Range 2</td><td>팔 활짝 벌리고 spread가 1 되도록 (0.5~0.9)</td></tr>
+<tr><td>반응 속도</td><td class="k">lag_smooth</td><td>0.1 = 즉각 · 0.4 = 명상적</td></tr>
+<tr><td>원 크기 폭</td><td class="k">radiusx의 0.38</td><td>0.45면 화면 밖까지</td></tr>
+</table>
+
+<h2><span class="no">D</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>spread가 계속 0이에요</strong> — 포즈는 <b>상반신 전체</b>가 프레임에 들어와야 잡힙니다. 카메라에서 한 걸음 물러나기. MediaPipe COMP의 Detect poses ON + pose_tracking 와이어 확인.</li>
+<li><strong>움직임이 뚝뚝 끊겨요</strong> — 손+포즈 동시 가동은 GPU 부하가 큽니다. 안 쓰는 모델(face 등) OFF, 다른 무거운 네트워크 뷰어 닫기.</li>
+<li><strong>값이 요동쳐요</strong> — 몸 일부가 가려지면 추정값이 튑니다. lag을 올리거나 조명·프레이밍 개선.</li>
+</ul>
+
+<h2><span class="no">E</span>더 가보기</h2>
+<ul class="plain">
+<li><strong>기울기 → 회전</strong> — 양 어깨 y 차이(같은 Subtract 패턴!) → Transform TOP의 Rotate.</li>
+<li><strong>키 높이 → 색</strong> — <code>nose:y</code> → HSV Hue. 앉았다 일어나면 색이 변함.</li>
+<li><strong>점프 감지</strong> — 골반(hip) y를 Slope CHOP으로 미분 → 급상승 = 점프 트리거.</li>
+<li><strong>y 거리까지</strong> — x만 말고 y도 Subtract해서 두 채널을 Length(피타고라스)로 — 진짜 2D 거리.</li>
+</ul></template>
+<template id="tpl-g04"><div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>04_TwoHands</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/04_TwoHands</b></div>
+
+<h1>04_TwoHands</h1>
+<p class="lead">두 손 사이의 거리가 신호가 된다 — <strong>손을 벌렸다 모으면 화면이 숨쉰다.</strong> 확장 미션 01의 완성본.</p>
+<div class="meta"><span>확장 미션 01</span><span>노드 8개</span><span>helpers = 공짜 채널 발견</span><span>난이도 ●○○</span></div>
+
+<h2><span class="no">A</span>완성 네트워크</h2>
+<div class="td-panel">
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">1ch</span></div><span class="opname">select_dist</span><span class="krname">두 손 거리</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">0~1</span></div><span class="opname">math_range</span><span class="krname">리매핑</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">dist</span></div><span class="opname">rename→lag</span><span class="krname">노드</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">out</span></div><span class="opname">null_dist</span><span class="krname">출구 ★</span></div>
+  </div>
+  <div class="net-row">
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">▒▒</span></div><span class="opname">noise_bg</span><span class="krname">임시 배경</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">≈</span></div><span class="opname">blur_breath</span><span class="krname">숨쉬는 블러</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">out</span></div><span class="opname">null_out</span><span class="krname">완성</span></div>
+  </div>
+  <p class="annot">noise_bg는 자리 표시용 — 여러분의 네트워크(웹캠·피드백·01_Hand의 빛)로 갈아끼우는 게 이 미션의 진짜 내용.</p>
+</div>
+<div class="why"><b>노드.</b> 이번 주 모든 베이스는 같은 다섯 마디 — <code>Select → Math → Rename → Lag → Null</code>.
+소스(검지·손목·거리)와 매핑(빛·소리·블러)만 바뀝니다. 지난주 오디오 체인과도 같은 구조.</div>
+
+<h2><span class="no">B</span>먼저: helpers는 보물창고</h2>
+<p><code>hand_tracking2/helpers</code> CHOP에는 플러그인이 <strong>미리 계산해둔 파생 채널</strong>이 들어 있습니다. 랜드마크에서 직접 만들려면 수고스러운 것들이 공짜:</p>
+<table>
+<tr><th>채널</th><th>내용</th><th>쓸 곳</th></tr>
+<tr><td class="k">hand_distance</td><td>두 손(h1↔h2) 사이 거리</td><td>이 미션!</td></tr>
+<tr><td class="k">h1:pinch_midpoint:distance</td><td>엄지끝↔검지끝 거리 (핀치)</td><td><a href="week2_05_pinch.html">05_Pinch</a></td></tr>
+<tr><td class="k">h1:pinch_midpoint:x·y</td><td>핀치 중간 지점 좌표</td><td>집어서 끌기</td></tr>
+<tr><td class="k">h1:pinch_midpoint:rotation</td><td>핀치 축 회전</td><td>허공 다이얼 돌리기</td></tr>
+<tr><td class="k">h1:hand_velocity</td><td>손 이동 속도</td><td>휘두르면 폭발</td></tr>
+<tr><td class="k">h1:hand_active</td><td>손 인식 여부 0/1</td><td>게이트 (<a href="week2_02_theremin.html">02</a>에서 사용)</td></tr>
+<tr><td class="k">h1:Leftness · Rightness</td><td>왼손/오른손일 확률</td><td>좌우 다른 역할 주기</td></tr>
+</table>
+<div class="why"><b>직접 계산하고 싶다면?</b> <a href="week2_03_pose.html">03_Pose</a>의 Subtract 패턴 그대로 — 두 검지끝 x를 빼고, y를 빼고, Length로 합치면 hand_distance와 같은 값이 나옵니다. 공짜 채널의 원리를 아는 것도 공부.</div>
+
+<h2><span class="no">B'</span>단계별 빌드</h2>
+
+<div class="bstep"><div class="sn">01</div><div>
+<h3><span class="chip chop">Select CHOP</span>select_dist</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">CHOPs</td><td><code>../hand_tracking2/helpers</code></td></tr>
+<tr><td class="k">Channel Names</td><td><code>hand_distance</code></td></tr>
+</table>
+<div class="why"><b>주의.</b> 이 채널은 <b>두 손이 모두</b> 잡혀야 유효합니다. MediaPipe COMP의 Max Number of Hands가 2인지 확인.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">02</div><div>
+<h3><span class="chip chop">Math → Rename → Lag → Null</span>노드 — 이제 눈 감고도</h3>
+<table>
+<tr><th>노드</th><th>설정</th></tr>
+<tr><td class="k">math_range</td><td>From <code>0.05 ~ 0.8</code> → To <code>0 ~ 1</code></td></tr>
+<tr><td class="k">rename_dist</td><td><code>*</code> → <code>dist</code></td></tr>
+<tr><td class="k">lag_smooth</td><td><code>0.15</code></td></tr>
+<tr><td class="k">null_dist</td><td>출구</td></tr>
+</table>
+</div></div>
+
+<div class="bstep"><div class="sn">03</div><div>
+<h3><span class="chip top">Blur TOP</span>blur_breath — 매핑</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">입력</td><td><code>noise_bg</code> (1280×720) — 나중에 갈아끼울 자리</td></tr>
+<tr><td class="k">Filter Size</td><td><code>1 + op('null_dist')['dist'] * 80</code></td></tr>
+</table>
+<p>두 손을 모으면 또렷, 벌리면 화면이 안개처럼 풀어집니다.</p>
+</div></div>
+
+<div class="bstep"><div class="sn">04</div><div>
+<h3>★ 진짜 미션: 배경 갈아끼우기</h3>
+<ul class="plain">
+<li>noise_bg를 지우고 그 자리에 — 웹캠(Video Device In), <a href="week2_01_hand.html">01_Hand</a>의 null_out(손그림이 뭉개진다!), 지난주 만든 피드백 네트워크.</li>
+<li>Blur 대신 — Transform(Scale) = 줌 인/아웃, Displace = 왜곡, HSV = 색.</li>
+<li>둘 다 — dist 하나로 Blur와 Scale을 동시에. 정규화된 채널은 몇 곳에든 꽂을 수 있으니까.</li>
+</ul>
+</div></div>
+
+<h2><span class="no">C</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>dist가 안 움직여요</strong> — 두 손이 다 화면에? helpers 뷰어에서 <code>h2:hand_active</code>도 1인지 확인.</li>
+<li><strong>블러가 너무 약해요/세요</strong> — 익스프레션의 <code>* 80</code>이 노브. GPU가 힘들어하면 60 이하로.</li>
+</ul>
+<ul class="plain">
+<li><strong>트래킹이 자꾸 끊겨요</strong> — 조명을 밝게, 배경과 손의 대비 확보, 카메라에서 50cm~1m. 품질의 절반은 조명입니다.</li>
+<li><strong>값이 아예 안 움직여요</strong> — <code>hand_tracking2/helpers</code>의 <code>h1:hand_active</code>가 1인지 먼저 확인. 0이면 손 인식 자체가 안 되는 것.</li>
+<li><strong>Select에 노란 경고</strong> — CHOPs 경로는 <strong>노드의 부모 네트워크 기준</strong>입니다. 베이스 안에서는 <code>../hand_tracking2/…</code> (../../ 아님!)</li>
+</ul>
+
+<h2><span class="no">D</span>더 가보기</h2>
+<ul class="plain">
+<li><strong>줌 제스처</strong> — dist → Transform TOP Scale <code>0.5 + dist * 1.5</code>. 스마트폰 핀치줌을 허공에서.</li>
+<li><strong>속도 채널 조합</strong> — hand_velocity를 뽑아 "빨리 휘두르면" 피드백 양 증가.</li>
+<li><strong>양손 좌표로 선 긋기</strong> — 두 검지끝을 각각 뽑아 Line/Rectangle의 양 끝점으로.</li>
+</ul></template>
+<template id="tpl-g05"><div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>05_Pinch</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/05_Pinch</b></div>
+
+<h1>05_Pinch</h1>
+<p class="lead">엄지와 검지를 집는 순간 — <strong>원이 터졌다가 사그라든다.</strong> 연속값을 <strong>이벤트</strong>로 바꾸는 법. 확장 미션 02의 완성본.</p>
+<div class="meta"><span>확장 미션 02</span><span>노드 7개</span><span>새 개념 2개: Logic · Trigger</span><span>난이도 ●●●</span></div>
+
+<h2><span class="no">A</span>완성 네트워크</h2>
+<div class="td-panel">
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">0.03…</span></div><span class="opname">select_pinch</span><span class="krname">핀치 거리</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">0/1</span></div><span class="opname">logic_pinch</span><span class="krname">스위치</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">◢◣</span></div><span class="opname">trigger_flash</span><span class="krname">봉투 발사</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">flash</span></div><span class="opname">rename→null</span><span class="krname">출구 ★</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">✹</span></div><span class="opname">circle_burst</span><span class="krname">터지는 원</span></div>
+  </div>
+  <p class="annot">연속값(거리) → 스위치(0/1) → 봉투(부드러운 산) — 3단 변환. 신디사이저의 엔벨로프와 같은 물건입니다.</p>
+</div>
+
+<h2><span class="no">B</span>핵심 개념: 연속값을 이벤트로</h2>
+<p>지금까지의 매핑은 전부 <strong>연속</strong>이었습니다 (손 높이 = 음정처럼 붙어서 따라가기). 그런데 "집는 <strong>순간</strong> 뭔가 일어나기"는 다른 종류의 문제 — <strong>이벤트</strong>가 필요합니다:</p>
+<pre>핀치 거리     0.21  0.18  0.12  0.04  0.03  0.05  0.15   <span class="c">연속값</span>
+Logic         0     0     0     <span class="o">1     1     1</span>     0      <span class="c">스위치 (0.05 미만 = ON)</span>
+Trigger       0     0     0     <span class="o">1.0</span>   0.7   0.4   0.2    <span class="c">봉투 (확 켜졌다 서서히)</span></pre>
+<div class="why"><b>왜 봉투?</b> 스위치 0/1을 바로 비주얼에 꽂으면 껌뻑거리기만 합니다. Trigger가 스위치를 <b>모양이 있는 곡선</b>(어택-디케이)으로 바꿔줘야 "펀치"의 맛이 생깁니다. 드럼 소리가 '딱' 하고 사라지는 그 모양.</div>
+
+<h2><span class="no">B'</span>단계별 빌드</h2>
+
+<div class="bstep"><div class="sn">01</div><div>
+<h3><span class="chip chop">Select CHOP</span>select_pinch</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">CHOPs</td><td><code>../hand_tracking2/helpers</code></td></tr>
+<tr><td class="k">Channel Names</td><td><code>h1:pinch_midpoint:distance</code></td></tr>
+</table>
+<p>뷰어를 열고 엄지·검지를 붙였다 뗐다 해보세요 — 붙이면 0.03 근처, 펴면 0.2 이상. <strong>내 손의 실측값</strong>을 먼저 알아야 다음 단계 문턱을 정합니다.</p>
+</div></div>
+
+<div class="bstep"><div class="sn">02</div><div>
+<h3><span class="chip chop">Logic CHOP</span>logic_pinch — ★새 개념: 스위치</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">Convert Input</td><td><code>On When Value is in Bounds</code></td></tr>
+<tr><td class="k">Bound Min / Max</td><td><code>0</code> / <code>0.05</code></td></tr>
+</table>
+<div class="why"><b>Logic = 관문.</b> "거리가 0~0.05 사이인가?" → 예: 1, 아니오: 0. 아날로그 세계(거리)가 디지털 세계(집었다/안집었다)로 건너오는 다리입니다.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">03</div><div>
+<h3><span class="chip chop">Trigger CHOP</span>trigger_flash — ★새 개념: 봉투</h3>
+<table>
+<tr><th>파라미터</th><th>값</th><th>역할</th></tr>
+<tr><td class="k">Attack</td><td><code>0.02</code></td><td>확 켜지기 (펀치)</td></tr>
+<tr><td class="k">Decay</td><td><code>0.4</code></td><td>사그라드는 시간</td></tr>
+<tr><td class="k">Sustain</td><td><code>0</code></td><td>누르고 있어도 유지 안 함</td></tr>
+<tr><td class="k">Release</td><td><code>0.3</code></td><td>떼었을 때 마무리</td></tr>
+</table>
+<p>이어서 Rename <code>*</code>→<code>flash</code>, <code>null_pinch</code>로 마무리.</p>
+</div></div>
+
+<div class="bstep"><div class="sn">04</div><div>
+<h3><span class="chip top">Circle TOP</span>circle_burst — 매핑</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">Resolution</td><td><code>1280 × 720</code></td></tr>
+<tr><td class="k">Radius X</td><td><code>0.05 + op('null_pinch')['flash'] * 0.45</code></td></tr>
+<tr><td class="k">Radius Y</td><td><code>me.par.radiusx</code></td></tr>
+<tr><td class="k">Softness</td><td><code>0.005 + op('null_pinch')['flash'] * 0.15</code></td></tr>
+</table>
+<p>집는 순간 원이 확 커지며 가장자리가 풀어졌다가, 0.4초에 걸쳐 사그라듭니다. Softness에도 flash를 꽂아서 <strong>커질수록 부드러워지는</strong> 디테일.</p>
+</div></div>
+
+<h2><span class="no">C</span>조절 노브</h2>
+<table>
+<tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
+<tr><td>핀치 판정 민감도</td><td class="k">logic_pinch · Bound Max</td><td>1단계에서 실측한 "집었을 때 값"보다 약간 크게</td></tr>
+<tr><td>펀치의 모양</td><td class="k">trigger_flash · Attack/Decay</td><td>Attack 0.001 = 스냅 · Decay 1.5 = 여운</td></tr>
+<tr><td>터지는 크기</td><td class="k">radiusx의 0.45</td><td>취향껏</td></tr>
+</table>
+
+<h2><span class="no">D</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>반응이 없어요</strong> — 1단계로 돌아가 실측. 손 크기·카메라 거리에 따라 "집었을 때 값"이 다릅니다 (0.02~0.08 사이). Bound Max를 거기에 맞추세요.</li>
+<li><strong>연발로 터져요</strong> — 경계값 근처에서 스위치가 떨리는 것. Logic 앞에 Lag(0.05)를 넣거나 Trigger의 Re-Trigger Delay를 0.3으로.</li>
+<li><strong>손을 폈는데도 켜져 있어요</strong> — Sustain이 0인지 확인.</li>
+</ul>
+<ul class="plain">
+<li><strong>트래킹이 자꾸 끊겨요</strong> — 조명을 밝게, 배경과 손의 대비 확보, 카메라에서 50cm~1m. 품질의 절반은 조명입니다.</li>
+<li><strong>값이 아예 안 움직여요</strong> — <code>hand_tracking2/helpers</code>의 <code>h1:hand_active</code>가 1인지 먼저 확인. 0이면 손 인식 자체가 안 되는 것.</li>
+<li><strong>Select에 노란 경고</strong> — CHOPs 경로는 <strong>노드의 부모 네트워크 기준</strong>입니다. 베이스 안에서는 <code>../hand_tracking2/…</code> (../../ 아님!)</li>
+</ul>
+
+<h2><span class="no">E</span>더 가보기 — 제스처는 이미 준비되어 있다</h2>
+<p><code>hand_tracking2</code>의 <code>gestures</code> CHOP에는 학습된 제스처 채널이 통째로 들어 있습니다:</p>
+<pre>h1:Closed_Fist   h1:Open_Palm   h1:Pointing_Up
+h1:Thumb_Up      h1:Thumb_Down  h1:Victory      h1:ILoveYou</pre>
+<ul class="plain">
+<li>각 채널은 해당 제스처일 확률(0~1) — <strong>같은 Logic → Trigger 패턴</strong>을 그대로 꽂으면 "브이 하면 터진다"가 됩니다.</li>
+<li><strong>씬 전환기</strong> — Open_Palm = 씬1, Closed_Fist = 씬2를 Switch TOP의 Index에.</li>
+<li><strong>집어서 끌기</strong> — <code>h1:pinch_midpoint:x·y</code>(집은 위치!)와 flash를 조합하면 물건을 집어 옮기는 인터랙션.</li>
+<li><strong>사운드</strong> — flash를 <a href="week2_02_theremin.html">02_Theremin</a> 오실레이터의 Amplitude에 곱하면 집을 때마다 "띵".</li>
+</ul></template>
+<template id="tpl-g06"><div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>06_RPS</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/06_RPS</b></div>
+
+<h1>06_RPS</h1>
+<p class="lead">손모양을 보고 <strong>가위·바위·보 중 무엇인지 판정</strong>하는 시스템 — 오늘 배운 전부를 합치는 <strong>최종 보스 미션</strong>.</p>
+<div class="meta"><span>최종 미션</span><span>노드 12개</span><span>새 개념: gestures · argmax</span><span>난이도 ●●●</span></div>
+
+<h2><span class="no">A</span>완성 네트워크</h2>
+<div class="td-panel">
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">3ch</span></div><span class="opname">select_gest</span><span class="krname">제스처 확률</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">r·p·s</span></div><span class="opname">rename_rps</span><span class="krname">이름 부여</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">~</span></div><span class="opname">lag_smooth</span><span class="krname">다림질</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">out</span></div><span class="opname">null_rps</span><span class="krname">출구 ★</span></div>
+  </div>
+  <div class="net-row">
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">●●●</span></div><span class="opname">circle × 3</span><span class="krname">확률 미터</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">+</span></div><span class="opname">add × 2</span><span class="krname">합치기</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">가위!</span></div><span class="opname">over(text)</span><span class="krname">판정 얹기</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">out</span></div><span class="opname">null_out</span><span class="krname">완성</span></div>
+  </div>
+  <p class="annot">Math가 없는 노드 — 제스처 확률은 이미 0~1이라 리매핑 불필요. Select → Rename → Lag → Null.</p>
+</div>
+
+<h2><span class="no">B</span>핵심 개념: ML은 정답이 아니라 확률을 준다</h2>
+<p><code>hand_tracking2/gestures</code>에는 플러그인이 학습해둔 <strong>제스처 8종의 확률 채널</strong>이 들어 있습니다:</p>
+<pre>h1:Closed_Fist(주먹)  h1:Open_Palm(보자기)  h1:Victory(브이)
+h1:Pointing_Up  h1:Thumb_Up  h1:Thumb_Down  h1:ILoveYou  h1:None</pre>
+<table>
+<tr><th>제스처 채널</th><th>가위바위보</th><th>확률 미터 색</th></tr>
+<tr><td class="k">h1:Closed_Fist</td><td>✊ 바위</td><td>빨강 (왼쪽)</td></tr>
+<tr><td class="k">h1:Open_Palm</td><td>✋ 보</td><td>초록 (가운데)</td></tr>
+<tr><td class="k">h1:Victory</td><td>✌ 가위</td><td>보라 (오른쪽)</td></tr>
+</table>
+<div class="why"><b>판정 = argmax + 문턱값.</b> 세 확률 중 <b>가장 큰 것</b>(argmax)을 고르되, 그 값이 <b>0.5를 넘을 때만</b> 판정합니다. 애매한 손모양이면 "…" — 심판이 판단을 보류하는 것. 이 두 단계가 모든 분류형 인터랙션의 뼈대입니다.</div>
+<pre>주먹을 쥐는 중…     rock   paper  scissors   판정
+프레임 1            0.2    0.3    0.1        . . .   <span class="c">(최대 0.3 &lt; 0.5 → 보류)</span>
+프레임 2            <span class="o">0.7</span>    0.1    0.1        <span class="o">바위</span>    <span class="c">(0.7 &gt; 0.5 → 확정)</span>
+프레임 3            <span class="o">0.95</span>   0.0    0.0        <span class="o">바위</span></pre>
+
+<h2><span class="no">B'</span>단계별 빌드</h2>
+
+<div class="bstep"><div class="sn">01</div><div>
+<h3><span class="chip chop">Select → Rename → Lag → Null</span>노드 — 이제 4번째</h3>
+<table>
+<tr><th>노드</th><th>설정</th></tr>
+<tr><td class="k">select_gest</td><td>CHOPs <code>../hand_tracking2/gestures</code> · Channel Names <code>h1:Closed_Fist h1:Open_Palm h1:Victory</code></td></tr>
+<tr><td class="k">rename_rps</td><td><code>h1:Closed_Fist h1:Open_Palm h1:Victory</code> → <code>rock paper scissors</code></td></tr>
+<tr><td class="k">lag_smooth</td><td><code>0.08</code> — 확률이 프레임마다 깜빡이는 걸 다림질 (크면 판정이 굼뜸)</td></tr>
+<tr><td class="k">null_rps</td><td><code>op('null_rps')['rock']</code> 식으로 사용</td></tr>
+</table>
+</div></div>
+
+<div class="bstep"><div class="sn">02</div><div>
+<h3><span class="chip top">Circle TOP × 3</span>확률 미터 — ML이 고민하는 모습</h3>
+<table>
+<tr><th>노드</th><th>Center X</th><th>Fill Color</th><th>Radius X (익스프레션)</th></tr>
+<tr><td class="k">circle_rock</td><td><code>-0.3</code></td><td>0.90 0.32 0.25</td><td><code>0.03 + op('null_rps')['rock'] * 0.12</code></td></tr>
+<tr><td class="k">circle_paper</td><td><code>0</code></td><td>0.55 0.78 0.42</td><td><code>0.03 + op('null_rps')['paper'] * 0.12</code></td></tr>
+<tr><td class="k">circle_scissors</td><td><code>0.3</code></td><td>0.63 0.52 0.85</td><td><code>0.03 + op('null_rps')['scissors'] * 0.12</code></td></tr>
+</table>
+<p>공통: 1280×720 · Center Y <code>0.06</code> · Radius Y <code>me.par.radiusx</code> · BG 검정(알파 1). 두 개의 <span class="chip top">Add TOP</span>으로 셋을 합칩니다.</p>
+<div class="why"><b>왜 미터를 보여줄까?</b> 손모양이 애매하면 원 여러 개가 어중간하게 커집니다 — <b>ML이 고민하는 모습을 눈으로 보는 것.</b> 판정 결과만 보여주면 시스템이 왜 틀리는지 아무도 모릅니다. 확률을 노출하는 것이 디버깅이자 연출.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">03</div><div>
+<h3><span class="chip top">Text TOP</span>text_result — 판정 발표</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">Font</td><td><code>Apple SD Gothic Neo</code> (한글 가능 폰트 필수! 윈도우는 <code>Malgun Gothic</code>)</td></tr>
+<tr><td class="k">Font Size X</td><td><code>110</code> · Bold ON · Align 가운데/가운데 · Position Y <code>-160</code></td></tr>
+<tr><td class="k">BG Alpha</td><td><code>0</code> (투명 — 미터 위에 얹을 거라)</td></tr>
+<tr><td class="k">Text (익스프레션)</td><td>아래 참고</td></tr>
+</table>
+<pre>(lambda r,p,s:
+  '바위' if (r>p and r>s and r>0.5) else
+  ('보'   if (p>=r and p>s and p>0.5) else
+  ('가위' if s>0.5 else '. . .'))
+)(op('null_rps')['rock'], op('null_rps')['paper'], op('null_rps')['scissors'])</pre>
+<div class="why"><b>읽는 법.</b> <code>lambda</code>는 "그 자리에서 만든 즉석 함수" — 세 확률 r, p, s를 받아 <b>서로 비교(argmax)</b>하고 <b>0.5 문턱</b>을 넘는 것만 한글로 돌려줍니다. 아무도 못 넘으면 <code>. . .</code> — 판정 보류.</div>
+<p>마지막으로 <span class="chip top">Over TOP</span>: 1번 입력 = text_result, 2번 입력 = 미터 합 → <code>null_out</code>. 완성!</p>
+</div></div>
+
+<h2><span class="no">C</span>조절 노브</h2>
+<table>
+<tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
+<tr><td>심판의 깐깐함</td><td class="k">text 익스프레션의 0.5</td><td>0.7 = 확실할 때만 판정 · 0.3 = 후하게</td></tr>
+<tr><td>판정 반응 속도</td><td class="k">lag_smooth</td><td>0.05 = 즉각(깜빡임 감수) · 0.15 = 안정</td></tr>
+<tr><td>미터 크기</td><td class="k">radiusx의 * 0.12</td><td>취향껏</td></tr>
+</table>
+
+<h2><span class="no">D</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>가위(Victory)가 잘 안 잡혀요</strong> — 제스처 인식은 <b>손바닥이 카메라를 향할 때</b> 가장 정확합니다. 손등을 보이면 확률이 뚝 떨어져요. 미터로 직접 확인해보세요.</li>
+<li><strong>판정이 깜빡거려요</strong> — lag을 올리거나 문턱값을 올리세요. 두 확률이 엎치락뒤치락하는 중입니다.</li>
+<li><strong>한글이 □□로 나와요</strong> — Font가 한글 지원 폰트인지 확인. macOS <code>Apple SD Gothic Neo</code> / Windows <code>Malgun Gothic</code>.</li>
+<li><strong>MediaPipe COMP에서 Detect hands가 ON인지</strong> — gestures는 hand 모델의 일부입니다.</li>
+</ul>
+
+<h2><span class="no">E</span>더 가보기 — 진짜 대결로</h2>
+<ul class="plain">
+<li><strong>★ 2인 대결 판정기</strong> — 같은 체인을 <code>h2:</code> 채널로 복붙하면 두 번째 플레이어. 두 판정을 비교하는 익스프레션(바위&gt;가위, 가위&gt;보, 보&gt;바위)으로 <b>승자 발표</b>까지. Max Number of Hands = 2 확인.</li>
+<li><strong>점수판</strong> — 승리 판정을 Logic으로 펄스화 → <code>Count CHOP</code>이 쌓아줍니다. 삼세판!</li>
+<li><strong>카운트다운</strong> — <code>Timer CHOP</code>으로 "가위… 바위… 보!" 3초 후 그 순간의 판정만 고정(Hold CHOP).</li>
+<li><strong>컴퓨터 플레이어</strong> — Noise CHOP을 0~2로 리매핑 + 반올림 = 컴퓨터의 랜덤 선택. 사람 vs TD.</li>
+<li><strong>소리</strong> — 판정 확정 순간을 <a href="week2_05_pinch.html">05_Pinch</a>의 Trigger 패턴으로 "띵!"</li>
+</ul></template>
+<template id="tpl-g07"><div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>07_RPS_Chop</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/07_RPS_Chop</b></div>
+
+<h1>07_RPS_Chop</h1>
+<p class="lead">06의 제스처 모델은 <strong>브이를 수직으로 세워야만</strong> 가위로 인식합니다. 이번엔 <strong>관절 xyz 좌표로 직접 기하학을 계산</strong> — 파이썬 없이 순수 CHOP만으로, 손을 어느 방향으로 돌려도 잡아내는 심판을 만듭니다.</p>
+<div class="meta"><span>최종 미션 심화</span><span>노드 ~50개</span><span>새 무기: Length · Logic 이진화 · 퍼지 AND</span><span>난이도 ●●●</span></div>
+
+<h2><span class="no">A</span>왜 06으로는 안 되나 — 블랙박스 vs 화이트박스</h2>
+<table>
+<tr><th></th><th>06_RPS (제스처 모델)</th><th>07_RPS_Chop (관절 기하학)</th></tr>
+<tr><td class="k">재료</td><td>학습된 분류기의 확률</td><td>21개 관절의 원시 xyz</td></tr>
+<tr><td class="k">방향</td><td>학습 데이터 방향대로만 (브이는 수직!)</td><td><strong class="accent">회전 무관</strong> — 눕힌 가위도 OK</td></tr>
+<tr><td class="k">고칠 수 있나</td><td>블랙박스 — 문턱값 정도만</td><td>화이트박스 — 규칙을 내가 정함</td></tr>
+<tr><td class="k">디버깅</td><td>확률만 보임</td><td><strong>모든 중간값이 뷰어에</strong> — 거리→비율→펴짐→판정</td></tr>
+</table>
+<div class="why"><b>왜 모델은 방향을 타나?</b> 분류기는 학습 사진들의 분포를 외운 것 — 세상 사람들이 브이를 대부분 세워서 찍으니, 눕힌 브이는 본 적 없는 낯선 데이터. 기하학은 외우지 않고 <b>계산</b>하니까 이 문제가 없습니다.</div>
+
+<h2><span class="no">B</span>핵심 아이디어: 회전 불변량</h2>
+<p>"손가락이 펴졌다"를 방향 없이 정의하려면? <strong>손끝이 손목에서 얼마나 멀어졌는지</strong>를 보면 됩니다:</p>
+<pre>  펴진 손가락              굽힌 손가락
+      ● tip                   ● pip
+      │                      ╱ ● tip  <span class="c">← 접혀서 손목 쪽으로</span>
+      ● pip                 │
+  ────●──── wrist       ────●──── wrist
+
+  ratio = dist(tip, wrist) ÷ dist(pip, wrist)
+  펴짐: ratio ≈ 1.25+     굽힘: ratio ≈ 0.95-
+  <span class="o">★ 손을 어떻게 돌려도 두 거리는 같이 돌아간다 → 비율은 불변</span></pre>
+<div class="why"><b>왜 절대거리가 아니라 비율?</b> 절대거리는 손 크기·카메라와의 거리에 오염됩니다. 비율은 그 오염이 분모·분자에서 상쇄 — <b>정규화의 기하학 버전.</b> z까지 3D로 계산해서 손가락이 카메라 쪽으로 접혀도 잡아냅니다.</div>
+<p>판정 규칙은 펴진 손가락 <strong>개수</strong>(엄지 제외 4개 중): 0개 = ✊ 바위 · 딱 검지+중지 = ✌ 가위 · 4개 = ✋ 보 · 그 외 = 판정 보류.</p>
+
+<h2><span class="no">C</span>손가락 블록 — 하나 만들고 3번 복붙</h2>
+<div class="td-panel">
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">xyz</span></div><span class="opname">sel_tip_index</span><span class="krname">손끝 3채널</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">−wrist</span></div><span class="opname">sub_tip_index</span><span class="krname">손목 빼기</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">√ΣΔ²</span></div><span class="opname">len_tip_index</span><span class="krname">피타고라스</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">÷</span></div><span class="opname">ratio_index</span><span class="krname">tip÷pip</span></div>
+  </div>
+  <p class="annot">같은 3노드가 pip에도 (sub_pip → len_pip) — ratio의 2번 입력으로. sel_wrist는 4개 블록이 공유.</p>
+</div>
+<table>
+<tr><th>노드</th><th>설정</th><th>왜 이 노드인가</th></tr>
+<tr><td class="k">sel_tip_index</td><td>CHOPs <code>../hand_tracking2/normalized_data</code> · <code>h1:index_finger_tip:*</code></td><td>점 하나 = x·y·z 3채널짜리 <b>벡터</b>로 다루기 위해</td></tr>
+<tr><td class="k">sub_tip_index</td><td>2입력 Math · Combine CHOPs = <b>Subtract</b> · Match by <b>Index</b></td><td>손목 기준 <b>상대 벡터</b>. 채널명이 달라서 순서(Index)로 매칭 — Name 매칭은 조용히 실패</td></tr>
+<tr><td class="k">len_tip_index</td><td>Math · Combine Channels = <b>Length</b></td><td>√(x²+y²+z²) — 제곱·합·루트 세 단계가 <b>메뉴 하나</b></td></tr>
+<tr><td class="k">ratio_index</td><td>2입력 Math · Combine CHOPs = <b>Divide</b> · Rename <code>*</code>→<code>index</code></td><td>비율 = <b>회전·크기 불변</b>. 채널명 = 손가락 이름 (노드의 Rename 습관)</td></tr>
+</table>
+<p>4개 블록의 ratio를 <span class="chip chop">Merge</span>로 합치고 → <span class="chip chop">Math</span> Range 0.95~1.25 → 0~1 → <span class="chip chop">Limit</span> Clamp 0~1 → <span class="chip chop">Lag</span>(0.1) → <code>null_fingers</code>.</p>
+<div class="why"><b>왜 Limit이 따로?</b> Math의 Range는 리매핑만 하고 <b>클램프를 안 합니다</b> — 범위 밖 비율이 그대로 새어 나와요. Limit(Clamp 0~1)이 뒷문을 닫습니다.</div>
+
+<h2><span class="no">D</span>판정 — 이진화 후, AND는 곱셈이다</h2>
+<p>먼저 <span class="chip chop">Logic</span> <code>logic_up</code>(On When Value in Bounds <code>0.5~1.5</code>)으로 펴짐 0~1을 <strong>0/1 스위치로 이진화</strong>합니다:</p>
+<div class="why"><b>이게 왜 필요한가 (실제 버그).</b> 연속값을 바로 곱하면 보 = 0.8×0.8×0.8×0.8 = <b>0.41</b> — 손을 활짝 펴도 문턱 근처에서 뭉개져 판정이 안 뜹니다. 0/1로 자른 뒤 곱하면 정확히 0 아니면 1.</div>
+<pre>바위 = (1-검지) × (1-중지) × (1-약지) × (1-새끼) × active
+보   =   검지  ×   중지  ×   약지  ×   새끼  × active
+가위 =   검지  ×   중지  × (1-약지) × (1-새끼) × active
+
+<span class="c">0/1의 곱 = AND · (1-x) = NOT · active 곱하기 = 손 없으면 전부 0 (게이트 공짜)</span></pre>
+<table>
+<tr><th>노드</th><th>구성</th></tr>
+<tr><td class="k">logic_up</td><td>Logic · On When Value in Bounds <code>0.5~1.5</code> — null_fingers에 연결</td></tr>
+<tr><td class="k">inv_fingers</td><td>Math Range 0~1 → <b>1~0</b> = NOT. logic_up에 연결</td></tr>
+<tr><td class="k">merge_rock → mul_rock</td><td>Merge(inv_fingers + sel_active) → Math Combine Channels = <b>Multiply</b> → rename <code>rock</code></td></tr>
+<tr><td class="k">merge_paper → mul_paper</td><td>Merge(logic_up + active) → Multiply → <code>paper</code></td></tr>
+<tr><td class="k">merge_scissors → mul_scissors</td><td>Merge(검지·중지 = logic_up에서 Select, 약지·새끼 = inv_fingers에서 Select, + active) → Multiply → <code>scissors</code></td></tr>
+</table>
+<p>셋을 Merge → <span class="chip chop">Lag</span>(0.08, 경계 파닥임 디바운스) → <code>null_rps</code> → 판정 텍스트(06과 같은 Text TOP, argmax + 문턱 0.5) + 손가락 미터 4개.</p>
+
+<h2><span class="no">E</span>조절 노브</h2>
+<table>
+<tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
+<tr><td>캘리브레이션</td><td class="k">math_norm · From Range</td><td>주먹에서 미터 완전히 꺼지고 보자기에서 꽉 차게 (0.9~1.3)</td></tr>
+<tr><td>'폈다' 판정 기준</td><td class="k">logic_up · Bound Min</td><td>0.5 기본 — 미터 보며 조정</td></tr>
+<tr><td>반응 속도</td><td class="k">lag_fingers / lag_rps</td><td>0.05~0.2</td></tr>
+</table>
+
+<h2><span class="no">F</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>중간값을 봐라 — 이 버전의 특권</strong> — len_tip_index(거리) → ratio_index(비율) → null_fingers(펴짐) → logic_up(스위치) → null_rps(판정) 뷰어를 차례로 열면 어디서 죽었는지 바로 보입니다.</li>
+<li><strong>미터는 되는데 텍스트가 안 바뀌어요</strong> — 이진화(logic_up)가 빠졌거나 Select 경로 문제. 특히 경로에 <code>./</code>를 붙이면 <b>조용히 빈 출력</b>이 됩니다(워닝도 없음!) — 시블링은 그냥 <code>logic_up</code>처럼 이름만. (실화: 첫 버전의 버그 두 개가 정확히 이거였습니다)</li>
+<li><strong>Subtract가 이상해요</strong> — Match by가 <b>Index</b>인지 확인.</li>
+<li><strong>바위만 계속 떠요</strong> — math_norm From Range 1(0.95)을 올려보세요. 손가락이 "덜 굽음"으로 새는 중.</li>
+</ul>
+
+<h2><span class="no">G</span>더 가보기</h2>
+<ul class="plain">
+<li><strong>Trail CHOP 디버깅</strong> — ratio 채널에 Trail을 붙이면 시간 그래프 — 문턱을 눈으로 정할 수 있습니다.</li>
+<li><strong>새 제스처</strong> — 곱셈 조합만 바꾸면: 검지만 = 포인팅, 검지+새끼 = 🤘.</li>
+<li><strong>같은 수학, 코드로</strong> — <a href="week2_08_rpsscript.html">08_RPS_Script</a>: 이 50노드가 파이썬 30줄이 되는 걸 보세요. 규칙이 복잡해질수록 코드가 유리해집니다.</li>
+</ul></template>
+<template id="tpl-g08"><div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>08_RPS_Script</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/08_RPS_Script</b></div>
+
+<h1>08_RPS_Script</h1>
+<p class="lead">07과 <strong>완전히 같은 수학</strong>을 — 노드 50개 대신 <strong>파이썬 30줄</strong>로. Script CHOP이라는 문을 여는 베이스.</p>
+<div class="meta"><span>07의 코드 번역판</span><span>새 개념: Script CHOP</span><span>파이썬 30줄</span><span>난이도 ●●●+</span></div>
+
+<h2><span class="no">A</span>CHOP → Script 번역표</h2>
+<p>07에서 만든 노드들이 코드 몇 줄이 되는지 — 방향만 뒤집으면 같은 표입니다:</p>
+<table>
+<tr><th>07 (CHOP)</th><th>08 (파이썬)</th></tr>
+<tr><td class="k">Sub → Length (블록 ×4)</td><td><code>d3()</code> 함수 하나 — 4번 재사용</td></tr>
+<tr><td class="k">Divide</td><td><code>ratio = d_tip / d_pip</code></td></tr>
+<tr><td class="k">Math Range + Limit</td><td><code>max(0, min(1, (ratio-0.95)/(1.25-0.95)))</code></td></tr>
+<tr><td class="k">Logic 이진화 + 곱셈 3개</td><td><code>up = [...]; n = len(up)</code> + if 세 줄</td></tr>
+<tr><td class="k">active Merge 게이트</td><td><code>× active</code> 한 항</td></tr>
+</table>
+<div class="why"><b>트레이드오프.</b> CHOP 버전은 모든 중간값이 뷰어로 보이고 코드를 몰라도 읽힙니다. Script 버전은 압축적이고 <b>규칙 바꾸기가 빠릅니다</b> — "검지+새끼 = 🤘" 같은 새 제스처가 한 줄. 같은 수학, 다른 표현 — 상황 따라 고르세요.</div>
+
+<h2><span class="no">B</span>Script CHOP — 파이썬으로 만드는 CHOP</h2>
+<p>Script CHOP은 <strong>매 프레임 onCook 함수를 실행해 채널을 직접 만드는</strong> 오퍼레이터입니다. 1번 입력에 관절 좌표(select h1:*), 2번 입력에 hand_active를 와이어. 코드는 도킹된 <code>script_fingers_callbacks</code> DAT에:</p>
+<pre>import math
+
+TIP = {'index': 'index_finger_tip', 'middle': 'middle_finger_tip',
+       'ring': 'ring_finger_tip',   'pinky': 'pinky_tip'}
+PIP = {'index': 'index_finger_pip', 'middle': 'middle_finger_pip',
+       'ring': 'ring_finger_pip',   'pinky': 'pinky_pip'}
+
+R_CURL, R_OPEN = 0.95, 1.25   <span class="c"># 굽힘/펴짐 경계 — 캘리브레이션 노브</span>
+
+def d3(src, a, b):
+    <span class="c"># 두 랜드마크 사이 3D 거리 — 07의 Sub→Length 두 노드가 이 세 줄</span>
+    return math.sqrt(sum(
+        (src['h1:%s:%s' % (a, ax)][0] - src['h1:%s:%s' % (b, ax)][0]) ** 2
+        for ax in 'xyz'))
+
+def onCook(scriptOp):
+    scriptOp.clear()
+    src = scriptOp.inputs[0]
+    active = scriptOp.inputs[1]['h1:hand_active'][0]
+
+    ext = {}
+    for f in TIP:                                  <span class="c"># 07의 블록 복붙 ×4 = for 루프</span>
+        d_tip = d3(src, TIP[f], 'wrist')
+        d_pip = d3(src, PIP[f], 'wrist')
+        ratio = d_tip / d_pip if d_pip > 1e-6 else 0.0
+        ext[f] = max(0.0, min(1.0, (ratio - R_CURL) / (R_OPEN - R_CURL))) * active
+
+    up = [f for f in ext if ext[f] > 0.5]          <span class="c"># 07의 Logic 이진화</span>
+    n = len(up)
+    rock     = active if n == 0 else 0.0           <span class="c"># 07의 곱셈 3개 = if 세 줄</span>
+    paper    = active if n == 4 else 0.0
+    scissors = active if (n == 2 and 'index' in up and 'middle' in up) else 0.0
+
+    for name, val in list(ext.items()) + [('count', float(n)),
+            ('rock', rock), ('paper', paper), ('scissors', scissors)]:
+        c = scriptOp.appendChan(name)              <span class="c"># 채널을 직접 만든다</span>
+        c.vals = [val]</pre>
+<p>출력 → Lag(0.1) → <code>null_geo</code> → 07과 같은 손가락 미터 + 판정 텍스트.</p>
+
+<h2><span class="no">C</span>조절 노브</h2>
+<table>
+<tr><th>증상</th><th>어디를</th><th>어떻게</th></tr>
+<tr><td>주먹인데 바위가 안 됨</td><td class="k">R_CURL 0.95</td><td>올리기 (1.0)</td></tr>
+<tr><td>펴도 미터가 덜 참</td><td class="k">R_OPEN 1.25</td><td>내리기 (1.15)</td></tr>
+<tr><td>판정 깜빡임</td><td class="k">lag_smooth</td><td>0.15로</td></tr>
+</table>
+
+<h2><span class="no">D</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>코드를 고쳤는데 반응이 없어요</strong> — Script CHOP 본체가 아니라 <b>콜백 DAT</b>(<code>…_callbacks</code>)를 고쳐야 합니다. 저장하면 즉시 반영.</li>
+<li><strong>에러가 났어요</strong> — Script CHOP이 빨간색이면 텍스트포트(Alt+T)에 파이썬 에러가 찍힙니다. 대부분 오타.</li>
+<li><strong>어디서 죽었는지 모르겠어요</strong> — 이럴 땐 07이 그리워지는 순간. 중간값 디버깅은 CHOP 버전이 압도적으로 편합니다.</li>
+</ul>
+
+<h2><span class="no">E</span>더 가보기 — 코드라서 쉬운 것들</h2>
+<ul class="plain">
+<li><strong>🤙 샤카</strong> — <code>shaka = active if (n==1 and 'pinky' in up) else 0</code>… 엄지 불변량은 직접 설계해보세요.</li>
+<li><strong>숫자 세기</strong> — count 채널(0~4)로 씬 전환.</li>
+<li><strong>핀치 강도</strong> — <code>d3(thumb_tip, index_finger_tip)</code>을 손 크기로 나누면 거리 무관 핀치 — 05의 업그레이드.</li>
+<li><strong>2인 대결</strong> — 06 가이드의 확장과 동일: h2 채널로 복제해 승패 로직까지.</li>
+</ul></template>
+
+<script>
+(function(){
+  const overlay = document.getElementById('goverlay');
+  const gbody = overlay.querySelector('.gbody');
+  const host = document.getElementById('ghost');
+  const shadow = host.attachShadow({mode: 'open'});
+  const gbtns = [...overlay.querySelectorAll('.gbar button[data-g]')];
+  const FILE2KEY = {};
+  gbtns.forEach(b => FILE2KEY[b.dataset.g] = true);
+  let gcur = null;
+
+  function render(key){
+    const tpl = document.getElementById('tpl-' + key);
+    if (!tpl) return;
+    gcur = key;
+    shadow.innerHTML = '';
+    shadow.appendChild(document.getElementById('tpl-gcss').content.cloneNode(true));
+    const wrap = document.createElement('div');
+    wrap.className = 'wrap';
+    wrap.appendChild(tpl.content.cloneNode(true));
+    shadow.appendChild(wrap);
+    gbtns.forEach(b => b.classList.toggle('on', b.dataset.g === key));
+    gbody.scrollTop = 0;
+    /* 가이드 간 상호 링크 가로채기 */
+    shadow.querySelectorAll('a').forEach(a => {
+      const href = a.getAttribute('href') || '';
+      const m = href.match(/week2_0(\d)_\w+\.html/);
+      if (m) a.addEventListener('click', e => { e.preventDefault(); openGuide('g0' + m[1]); });
+    });
+  }
+  window.openGuide = function(key){
+    overlay.hidden = false;
+    render(key);
+    history.replaceState(null, '', '#' + key);
+  };
+  function closeGuide(){
+    overlay.hidden = true;
+    history.replaceState(null, '', ' ');
+  }
+  document.getElementById('gclose').addEventListener('click', closeGuide);
+  gbtns.forEach(b => b.addEventListener('click', () => openGuide(b.dataset.g)));
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a.glink');
+    if (a) { e.preventDefault(); openGuide(a.getAttribute('href').slice(1)); }
+  });
+  document.addEventListener('keydown', e => {
+    if (!overlay.hidden && e.key === 'Escape') { e.preventDefault(); closeGuide(); }
+  }, true);
+  /* 해시로 직접 진입: week2.html#g03 (덱이 덮기 전 원본 해시 사용) */
+  const h = window.__initHash || location.hash.slice(1);
+  if (/^g0[1-8]$/.test(h)) openGuide(h);
+  window.addEventListener('hashchange', () => {
+    const n = location.hash.slice(1);
+    if (/^g0[1-8]$/.test(n)) openGuide(n);
+  });
+})();
+</script>
+</body>
+</html>
