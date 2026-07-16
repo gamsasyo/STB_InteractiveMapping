@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>03_Pose — 팔을 벌리면 화면이 커진다 · 수퍼 테스트베드 LAB 2주차</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --paper: #ffffff; --ink: #141414; --gray: #8d8d8d; --faint: #ececec;
+    --accent: #e8820c; --panel: #1d1d21; --panel-grid: #26262b; --node-body: #101012;
+    --fam-top: #a88bd4; --fam-chop: #8fbf6f; --wire: #7a7a82;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "JetBrains Mono", monospace;
+    --sans: -apple-system, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", sans-serif;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.65; }
+  .topnav {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+    padding: 10px 18px; background: rgba(255,255,255,.95);
+    border-bottom: 1px solid var(--faint); backdrop-filter: blur(6px);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .topnav a { color: var(--gray); text-decoration: none; padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+  .topnav a:hover { background: var(--faint); color: var(--ink); }
+  .topnav a.on { color: var(--accent); font-weight: 700; background: #fdf3e7; }
+  .topnav a.back { color: var(--ink); font-weight: 700; margin-right: 8px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 90px; }
+  .crumb { font-family: var(--mono); font-size: 13px; color: var(--gray); margin-bottom: 14px; }
+  .crumb b { color: var(--accent); }
+  h1 { font-family: var(--mono); font-size: clamp(30px, 5vw, 46px); letter-spacing: -0.02em; margin-bottom: 10px; }
+  .lead { font-size: clamp(17px, 2.2vw, 21px); color: #444; margin-bottom: 18px; }
+  .lead strong { color: var(--accent); }
+  .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 34px; }
+  .meta span { font-family: var(--mono); font-size: 12.5px; color: var(--gray);
+    border: 1px solid var(--faint); border-radius: 999px; padding: 4px 12px; }
+  h2 { font-size: clamp(21px, 2.6vw, 27px); font-weight: 800; letter-spacing: -0.01em;
+    margin: 46px 0 16px; padding-top: 14px; border-top: 2px solid var(--ink); }
+  h2 .no { font-family: var(--mono); color: var(--accent); margin-right: 8px; }
+  p { font-size: clamp(15px, 1.9vw, 17px); margin-bottom: 12px; }
+  .muted { color: var(--gray); }
+  .accent { color: var(--accent); }
+  code { font-family: var(--mono); background: var(--faint); padding: .1em .4em; border-radius: 5px; font-size: .88em; }
+  pre { font-family: var(--mono); font-size: 13.5px; line-height: 1.7; background: var(--panel); color: #cfcfd6;
+    border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 14px 0; }
+  pre .c { color: #7a7a82; } pre .o { color: var(--accent); } pre .g { color: var(--fam-chop); }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0 22px; }
+  th, td { padding: 10px 12px; font-size: 14.5px; text-align: left; border-bottom: 1px solid var(--faint); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 12px; color: var(--gray); font-weight: 500; letter-spacing: .06em; border-bottom: 2px solid var(--ink); }
+  td.k { font-family: var(--mono); white-space: nowrap; font-weight: 700; }
+  .chip { display: inline-block; font-family: var(--mono); font-weight: 700; font-size: 12.5px;
+    padding: .18em .55em; border-radius: 6px; }
+  .chip.top { background: var(--fam-top); color: #1c1428; }
+  .chip.chop { background: var(--fam-chop); color: #16210f; }
+  /* TD network panel */
+  .td-panel { background:
+      repeating-linear-gradient(0deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      repeating-linear-gradient(90deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      var(--panel);
+    border-radius: 12px; padding: 28px 22px; overflow-x: auto; margin: 16px 0 8px; }
+  .net-row { display: flex; align-items: center; min-width: max-content; }
+  .net-row + .net-row { margin-top: 26px; }
+  .node { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .node .chassis { width: 118px; height: 56px; background: var(--node-body);
+    border: 2px solid var(--fam, var(--fam-top)); border-radius: 6px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.35); }
+  .node .chassis::before, .node .chassis::after { content: ""; position: absolute; top: 18%; bottom: 18%;
+    width: 4px; background: var(--fam, var(--fam-top)); opacity: .85; border-radius: 2px; }
+  .node .chassis::before { left: -3px; } .node .chassis::after { right: -3px; }
+  .node .fam-tag { position: absolute; top: 4px; left: 7px; font-family: var(--mono); font-size: 8.5px;
+    color: var(--fam, var(--fam-top)); letter-spacing: .08em; }
+  .node .viewer { font-family: var(--mono); font-size: 12px; color: #cfcfd6; }
+  .node .opname { font-family: var(--mono); font-size: 11.5px; color: #b9b9c2; }
+  .node .krname { font-size: 11px; color: #77777f; }
+  .node.chop { --fam: var(--fam-chop); } .node.top { --fam: var(--fam-top); }
+  .wire { width: 42px; height: 2px; background: var(--wire); position: relative; margin: 0 3px;
+    transform: translateY(-14px); flex: 0 0 auto; }
+  .wire::after { content: ""; position: absolute; right: -1px; top: 50%; transform: translateY(-50%);
+    border-left: 7px solid var(--wire); border-top: 4.5px solid transparent; border-bottom: 4.5px solid transparent; }
+  .annot { font-family: var(--mono); color: var(--accent); font-size: 13px; line-height: 1.7; margin-top: 18px; }
+  /* build steps */
+  .bstep { display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding: 20px 0; border-bottom: 1px solid var(--faint); }
+  .bstep .sn { font-family: var(--mono); font-size: 19px; font-weight: 700; color: var(--accent); padding-top: 2px; }
+  .bstep h3 { font-size: 17.5px; font-weight: 800; margin-bottom: 6px; }
+  .bstep h3 .chip { margin-right: 6px; vertical-align: 2px; }
+  .bstep p { font-size: 15px; margin-bottom: 8px; }
+  .bstep table { margin: 10px 0 4px; }
+  .why { background: #fdf3e7; border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0;
+    padding: 10px 14px; font-size: 14px; margin: 10px 0 4px; }
+  .why b { color: var(--accent); }
+  ul.plain { margin: 6px 0 12px 2px; list-style: none; }
+  ul.plain li { font-size: 15px; padding-left: 1.4em; position: relative; margin-bottom: 7px; }
+  ul.plain li::before { content: ""; position: absolute; left: 0; top: .5em; width: .5em; height: .5em;
+    border-radius: 2px; background: var(--accent); }
+  .pagenav { display: flex; justify-content: space-between; margin-top: 60px; padding-top: 20px;
+    border-top: 2px solid var(--ink); font-family: var(--mono); font-size: 14px; }
+  .pagenav a { color: var(--ink); text-decoration: none; font-weight: 700; }
+  .pagenav a:hover { color: var(--accent); }
+  .pagenav .sub { display: block; font-size: 12px; color: var(--gray); font-weight: 400; margin-top: 3px; }
+  @media (max-width: 640px) { .bstep { grid-template-columns: 32px 1fr; } }
+</style>
+</head>
+<body>
+<nav class="topnav"><a class="back" href="../slides/week2.html">← 2주차 슬라이드</a><a href="week2_01_hand.html">01_Hand</a><a href="week2_02_theremin.html">02_Theremin</a><a class="on" href="week2_03_pose.html">03_Pose</a><a href="week2_04_twohands.html">04_TwoHands</a><a href="week2_05_pinch.html">05_Pinch</a><a href="week2_06_rps.html">06_RPS</a><a href="week2_07_rpschop.html">07_RPS_Chop</a><a href="week2_08_rpsscript.html">08_RPS_Script</a></nav>
+<div class="wrap">
+<div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>03_Pose</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/03_Pose</b></div>
+
+<h1>03_Pose</h1>
+<p class="lead">이번엔 손이 아니라 <strong>몸 전체 33개 랜드마크</strong>. 양 손목 사이 거리로 — <strong>팔을 벌리면 화면이 커진다.</strong></p>
+<div class="meta"><span>가이드 빌드 ②</span><span>노드 8개</span><span>같은 척추 + 새 개념 1개</span><span>난이도 ●●○</span></div>
+
+<h2><span class="no">A</span>완성 네트워크</h2>
+<div class="td-panel">
+  <div class="net-row">
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">2ch</span></div><span class="opname">select_wrists</span><span class="krname">양 손목 x</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">L−R</span></div><span class="opname">math_diff</span><span class="krname">빼기</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">|x|</span></div><span class="opname">math_abs</span><span class="krname">절대값+범위</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">spread</span></div><span class="opname">rename→lag</span><span class="krname">이름·다림질</span></div>
+    <div class="wire"></div>
+    <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">out</span></div><span class="opname">null_pose</span><span class="krname">출구 ★</span></div>
+  </div>
+  <div class="net-row">
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">●→◯</span></div><span class="opname">circle_breathe</span><span class="krname">숨쉬는 원</span></div>
+    <div class="wire"></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">out</span></div><span class="opname">null_out</span><span class="krname">완성</span></div>
+  </div>
+  <p class="annot">Select → Math → Rename → Lag → Null — 소스가 hand→pose로 바뀌어도 척추는 그대로. 새 개념은 Math 하나(두 채널을 한 채널로).</p>
+</div>
+<div class="why"><b>척추.</b> 이번 주 모든 베이스는 같은 다섯 마디 — <code>Select → Math → Rename → Lag → Null</code>.
+소스(검지·손목·거리)와 매핑(빛·소리·블러)만 바뀝니다. 지난주 오디오 체인과도 같은 구조.</div>
+
+<h2><span class="no">B</span>단계별 빌드</h2>
+
+<div class="bstep"><div class="sn">01</div><div>
+<h3>pose_tracking 준비 (이 파일엔 이미 되어 있음)</h3>
+<p>새로 만들 때는: <code>release/toxes/pose_tracking.tox</code>를 <code>/project1</code>에 드래그 → MediaPipe COMP의 <strong>pose 출력</strong>과 와이어로 연결 → MediaPipe COMP에서 <code>Detect poses</code> ON.</p>
+<div class="why"><b>채널명 주의.</b> 포즈는 손과 달리 프리픽스가 없습니다 — <code>left_wrist:x</code>, <code>right_shoulder:y</code> 식. 총 33점: nose, eyes, ears, shoulders, elbows, <b>wrists</b>, hips, knees, ankles… <code>normalized_data</code> 뷰어에서 직접 확인하는 습관!</div>
+</div></div>
+
+<div class="bstep"><div class="sn">02</div><div>
+<h3><span class="chip chop">Select CHOP</span>select_wrists — 양 손목 x만</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">CHOPs</td><td><code>../pose_tracking/normalized_data</code></td></tr>
+<tr><td class="k">Channel Names</td><td><code>left_wrist:x right_wrist:x</code></td></tr>
+</table>
+</div></div>
+
+<div class="bstep"><div class="sn">03</div><div>
+<h3><span class="chip chop">Math CHOP</span>math_diff — ★새 개념: 두 채널을 한 채널로</h3>
+<table>
+<tr><th>파라미터 (OP 페이지)</th><th>값</th></tr>
+<tr><td class="k">Combine Channels</td><td><code>Subtract</code></td></tr>
+</table>
+<div class="why"><b>여기가 오늘의 점프.</b> 지금까지 Math는 채널을 "각자" 바꿨는데(범위 리매핑), Combine Channels는 <b>채널들 사이의 관계</b>를 계산합니다. 왼손목 − 오른손목 = 채널 2개가 "차이" 1개로. <b>관계가 새 신호가 되는 순간.</b></div>
+<pre>left_wrist:x  0.85 ┐
+                   ├─ Subtract → 0.63  <span class="c">(부호는 방향일 뿐)</span>
+right_wrist:x 0.22 ┘</pre>
+</div></div>
+
+<div class="bstep"><div class="sn">04</div><div>
+<h3><span class="chip chop">Math CHOP</span>math_abs — 절대값 + 범위</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">Channel Pre OP</td><td><code>Positive</code> (절대값)</td></tr>
+<tr><td class="k">From Range → To Range</td><td><code>0 ~ 0.7</code> → <code>0 ~ 1</code></td></tr>
+</table>
+<div class="why"><b>왜 절대값?</b> 어느 손이 왼쪽에 있든 "벌어진 정도"만 원하니까 부호(방향)를 버립니다. 0.7은 화면 안에서 팔을 활짝 벌렸을 때의 실측값 — <b>사람·카메라 거리마다 달라서 현장 캘리브레이션 대상.</b></div>
+</div></div>
+
+<div class="bstep"><div class="sn">05</div><div>
+<h3><span class="chip chop">Rename → Lag → Null</span>척추 마무리</h3>
+<p>Rename: <code>*</code> → <code>spread</code> · Lag <code>0.2</code>(몸은 손보다 느긋하게) · <code>null_pose</code>. 이제 <code>op('null_pose')['spread']</code> = 0(모음) ~ 1(활짝).</p>
+</div></div>
+
+<div class="bstep"><div class="sn">06</div><div>
+<h3><span class="chip top">Circle TOP</span>circle_breathe — 매핑</h3>
+<table>
+<tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">Resolution</td><td><code>1280 × 720</code></td></tr>
+<tr><td class="k">Radius X</td><td><code>0.05 + op('null_pose')['spread'] * 0.38</code></td></tr>
+<tr><td class="k">Radius Y</td><td><code>me.par.radiusx</code></td></tr>
+</table>
+<p>팔을 모으면 작은 점, 활짝 벌리면 화면을 채우는 원. <strong>몸이 파라미터 패널이 됐습니다.</strong></p>
+</div></div>
+
+<h2><span class="no">C</span>조절 노브</h2>
+<table>
+<tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
+<tr><td>팔 스팬 캘리브레이션</td><td class="k">math_abs · From Range 2</td><td>팔 활짝 벌리고 spread가 1 되도록 (0.5~0.9)</td></tr>
+<tr><td>반응 속도</td><td class="k">lag_smooth</td><td>0.1 = 즉각 · 0.4 = 명상적</td></tr>
+<tr><td>원 크기 폭</td><td class="k">radiusx의 0.38</td><td>0.45면 화면 밖까지</td></tr>
+</table>
+
+<h2><span class="no">D</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>spread가 계속 0이에요</strong> — 포즈는 <b>상반신 전체</b>가 프레임에 들어와야 잡힙니다. 카메라에서 한 걸음 물러나기. MediaPipe COMP의 Detect poses ON + pose_tracking 와이어 확인.</li>
+<li><strong>움직임이 뚝뚝 끊겨요</strong> — 손+포즈 동시 가동은 GPU 부하가 큽니다. 안 쓰는 모델(face 등) OFF, 다른 무거운 네트워크 뷰어 닫기.</li>
+<li><strong>값이 요동쳐요</strong> — 몸 일부가 가려지면 추정값이 튑니다. lag을 올리거나 조명·프레이밍 개선.</li>
+</ul>
+
+<h2><span class="no">E</span>더 가보기</h2>
+<ul class="plain">
+<li><strong>기울기 → 회전</strong> — 양 어깨 y 차이(같은 Subtract 패턴!) → Transform TOP의 Rotate.</li>
+<li><strong>키 높이 → 색</strong> — <code>nose:y</code> → HSV Hue. 앉았다 일어나면 색이 변함.</li>
+<li><strong>점프 감지</strong> — 골반(hip) y를 Slope CHOP으로 미분 → 급상승 = 점프 트리거.</li>
+<li><strong>y 거리까지</strong> — x만 말고 y도 Subtract해서 두 채널을 Length(피타고라스)로 — 진짜 2D 거리.</li>
+</ul>
+
+<div class="pagenav"><a href="week2_02_theremin.html">← 02_Theremin<span class="sub">손 = 악기, 허공 테레민</span></a><a href="week2_04_twohands.html" style="text-align:right;">04_TwoHands →<span class="sub">두 손 사이의 공간</span></a></div>
+</div>
+</body>
+</html>

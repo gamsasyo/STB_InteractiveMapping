@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>08_RPS_Script — 같은 수학을 파이썬 30줄로 · 수퍼 테스트베드 LAB 2주차</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --paper: #ffffff; --ink: #141414; --gray: #8d8d8d; --faint: #ececec;
+    --accent: #e8820c; --panel: #1d1d21; --panel-grid: #26262b; --node-body: #101012;
+    --fam-top: #a88bd4; --fam-chop: #8fbf6f; --wire: #7a7a82;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "JetBrains Mono", monospace;
+    --sans: -apple-system, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", sans-serif;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.65; }
+  .topnav {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+    padding: 10px 18px; background: rgba(255,255,255,.95);
+    border-bottom: 1px solid var(--faint); backdrop-filter: blur(6px);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .topnav a { color: var(--gray); text-decoration: none; padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+  .topnav a:hover { background: var(--faint); color: var(--ink); }
+  .topnav a.on { color: var(--accent); font-weight: 700; background: #fdf3e7; }
+  .topnav a.back { color: var(--ink); font-weight: 700; margin-right: 8px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 90px; }
+  .crumb { font-family: var(--mono); font-size: 13px; color: var(--gray); margin-bottom: 14px; }
+  .crumb b { color: var(--accent); }
+  h1 { font-family: var(--mono); font-size: clamp(30px, 5vw, 46px); letter-spacing: -0.02em; margin-bottom: 10px; }
+  .lead { font-size: clamp(17px, 2.2vw, 21px); color: #444; margin-bottom: 18px; }
+  .lead strong { color: var(--accent); }
+  .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 34px; }
+  .meta span { font-family: var(--mono); font-size: 12.5px; color: var(--gray);
+    border: 1px solid var(--faint); border-radius: 999px; padding: 4px 12px; }
+  h2 { font-size: clamp(21px, 2.6vw, 27px); font-weight: 800; letter-spacing: -0.01em;
+    margin: 46px 0 16px; padding-top: 14px; border-top: 2px solid var(--ink); }
+  h2 .no { font-family: var(--mono); color: var(--accent); margin-right: 8px; }
+  p { font-size: clamp(15px, 1.9vw, 17px); margin-bottom: 12px; }
+  .muted { color: var(--gray); }
+  .accent { color: var(--accent); }
+  code { font-family: var(--mono); background: var(--faint); padding: .1em .4em; border-radius: 5px; font-size: .88em; }
+  pre { font-family: var(--mono); font-size: 13.5px; line-height: 1.7; background: var(--panel); color: #cfcfd6;
+    border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 14px 0; }
+  pre .c { color: #7a7a82; } pre .o { color: var(--accent); } pre .g { color: var(--fam-chop); }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0 22px; }
+  th, td { padding: 10px 12px; font-size: 14.5px; text-align: left; border-bottom: 1px solid var(--faint); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 12px; color: var(--gray); font-weight: 500; letter-spacing: .06em; border-bottom: 2px solid var(--ink); }
+  td.k { font-family: var(--mono); white-space: nowrap; font-weight: 700; }
+  .chip { display: inline-block; font-family: var(--mono); font-weight: 700; font-size: 12.5px;
+    padding: .18em .55em; border-radius: 6px; }
+  .chip.top { background: var(--fam-top); color: #1c1428; }
+  .chip.chop { background: var(--fam-chop); color: #16210f; }
+  /* TD network panel */
+  .td-panel { background:
+      repeating-linear-gradient(0deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      repeating-linear-gradient(90deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      var(--panel);
+    border-radius: 12px; padding: 28px 22px; overflow-x: auto; margin: 16px 0 8px; }
+  .net-row { display: flex; align-items: center; min-width: max-content; }
+  .net-row + .net-row { margin-top: 26px; }
+  .node { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .node .chassis { width: 118px; height: 56px; background: var(--node-body);
+    border: 2px solid var(--fam, var(--fam-top)); border-radius: 6px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.35); }
+  .node .chassis::before, .node .chassis::after { content: ""; position: absolute; top: 18%; bottom: 18%;
+    width: 4px; background: var(--fam, var(--fam-top)); opacity: .85; border-radius: 2px; }
+  .node .chassis::before { left: -3px; } .node .chassis::after { right: -3px; }
+  .node .fam-tag { position: absolute; top: 4px; left: 7px; font-family: var(--mono); font-size: 8.5px;
+    color: var(--fam, var(--fam-top)); letter-spacing: .08em; }
+  .node .viewer { font-family: var(--mono); font-size: 12px; color: #cfcfd6; }
+  .node .opname { font-family: var(--mono); font-size: 11.5px; color: #b9b9c2; }
+  .node .krname { font-size: 11px; color: #77777f; }
+  .node.chop { --fam: var(--fam-chop); } .node.top { --fam: var(--fam-top); }
+  .wire { width: 42px; height: 2px; background: var(--wire); position: relative; margin: 0 3px;
+    transform: translateY(-14px); flex: 0 0 auto; }
+  .wire::after { content: ""; position: absolute; right: -1px; top: 50%; transform: translateY(-50%);
+    border-left: 7px solid var(--wire); border-top: 4.5px solid transparent; border-bottom: 4.5px solid transparent; }
+  .annot { font-family: var(--mono); color: var(--accent); font-size: 13px; line-height: 1.7; margin-top: 18px; }
+  /* build steps */
+  .bstep { display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding: 20px 0; border-bottom: 1px solid var(--faint); }
+  .bstep .sn { font-family: var(--mono); font-size: 19px; font-weight: 700; color: var(--accent); padding-top: 2px; }
+  .bstep h3 { font-size: 17.5px; font-weight: 800; margin-bottom: 6px; }
+  .bstep h3 .chip { margin-right: 6px; vertical-align: 2px; }
+  .bstep p { font-size: 15px; margin-bottom: 8px; }
+  .bstep table { margin: 10px 0 4px; }
+  .why { background: #fdf3e7; border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0;
+    padding: 10px 14px; font-size: 14px; margin: 10px 0 4px; }
+  .why b { color: var(--accent); }
+  ul.plain { margin: 6px 0 12px 2px; list-style: none; }
+  ul.plain li { font-size: 15px; padding-left: 1.4em; position: relative; margin-bottom: 7px; }
+  ul.plain li::before { content: ""; position: absolute; left: 0; top: .5em; width: .5em; height: .5em;
+    border-radius: 2px; background: var(--accent); }
+  .pagenav { display: flex; justify-content: space-between; margin-top: 60px; padding-top: 20px;
+    border-top: 2px solid var(--ink); font-family: var(--mono); font-size: 14px; }
+  .pagenav a { color: var(--ink); text-decoration: none; font-weight: 700; }
+  .pagenav a:hover { color: var(--accent); }
+  .pagenav .sub { display: block; font-size: 12px; color: var(--gray); font-weight: 400; margin-top: 3px; }
+  @media (max-width: 640px) { .bstep { grid-template-columns: 32px 1fr; } }
+</style>
+</head>
+<body>
+<nav class="topnav"><a class="back" href="../slides/week2.html">← 2주차 슬라이드</a><a href="week2_01_hand.html">01_Hand</a><a href="week2_02_theremin.html">02_Theremin</a><a href="week2_03_pose.html">03_Pose</a><a href="week2_04_twohands.html">04_TwoHands</a><a href="week2_05_pinch.html">05_Pinch</a><a href="week2_06_rps.html">06_RPS</a><a href="week2_07_rpschop.html">07_RPS_Chop</a><a class="on" href="week2_08_rpsscript.html">08_RPS_Script</a></nav>
+<div class="wrap">
+<div class="crumb">수퍼 테스트베드 LAB — 2주차 MediaPipe · 베이스 가이드 <b>08_RPS_Script</b> · 파일 <b>week2.toe</b> 위치 <b>/project1/08_RPS_Script</b></div>
+
+<h1>08_RPS_Script</h1>
+<p class="lead">07과 <strong>완전히 같은 수학</strong>을 — 노드 50개 대신 <strong>파이썬 30줄</strong>로. Script CHOP이라는 문을 여는 베이스.</p>
+<div class="meta"><span>07의 코드 번역판</span><span>새 개념: Script CHOP</span><span>파이썬 30줄</span><span>난이도 ●●●+</span></div>
+
+<h2><span class="no">A</span>CHOP → Script 번역표</h2>
+<p>07에서 만든 노드들이 코드 몇 줄이 되는지 — 방향만 뒤집으면 같은 표입니다:</p>
+<table>
+<tr><th>07 (CHOP)</th><th>08 (파이썬)</th></tr>
+<tr><td class="k">Sub → Length (블록 ×4)</td><td><code>d3()</code> 함수 하나 — 4번 재사용</td></tr>
+<tr><td class="k">Divide</td><td><code>ratio = d_tip / d_pip</code></td></tr>
+<tr><td class="k">Math Range + Limit</td><td><code>max(0, min(1, (ratio-0.95)/(1.25-0.95)))</code></td></tr>
+<tr><td class="k">Logic 이진화 + 곱셈 3개</td><td><code>up = [...]; n = len(up)</code> + if 세 줄</td></tr>
+<tr><td class="k">active Merge 게이트</td><td><code>× active</code> 한 항</td></tr>
+</table>
+<div class="why"><b>트레이드오프.</b> CHOP 버전은 모든 중간값이 뷰어로 보이고 코드를 몰라도 읽힙니다. Script 버전은 압축적이고 <b>규칙 바꾸기가 빠릅니다</b> — "검지+새끼 = 🤘" 같은 새 제스처가 한 줄. 같은 수학, 다른 표현 — 상황 따라 고르세요.</div>
+
+<h2><span class="no">B</span>Script CHOP — 파이썬으로 만드는 CHOP</h2>
+<p>Script CHOP은 <strong>매 프레임 onCook 함수를 실행해 채널을 직접 만드는</strong> 오퍼레이터입니다. 1번 입력에 관절 좌표(select h1:*), 2번 입력에 hand_active를 와이어. 코드는 도킹된 <code>script_fingers_callbacks</code> DAT에:</p>
+<pre>import math
+
+TIP = {'index': 'index_finger_tip', 'middle': 'middle_finger_tip',
+       'ring': 'ring_finger_tip',   'pinky': 'pinky_tip'}
+PIP = {'index': 'index_finger_pip', 'middle': 'middle_finger_pip',
+       'ring': 'ring_finger_pip',   'pinky': 'pinky_pip'}
+
+R_CURL, R_OPEN = 0.95, 1.25   <span class="c"># 굽힘/펴짐 경계 — 캘리브레이션 노브</span>
+
+def d3(src, a, b):
+    <span class="c"># 두 랜드마크 사이 3D 거리 — 07의 Sub→Length 두 노드가 이 세 줄</span>
+    return math.sqrt(sum(
+        (src['h1:%s:%s' % (a, ax)][0] - src['h1:%s:%s' % (b, ax)][0]) ** 2
+        for ax in 'xyz'))
+
+def onCook(scriptOp):
+    scriptOp.clear()
+    src = scriptOp.inputs[0]
+    active = scriptOp.inputs[1]['h1:hand_active'][0]
+
+    ext = {}
+    for f in TIP:                                  <span class="c"># 07의 블록 복붙 ×4 = for 루프</span>
+        d_tip = d3(src, TIP[f], 'wrist')
+        d_pip = d3(src, PIP[f], 'wrist')
+        ratio = d_tip / d_pip if d_pip > 1e-6 else 0.0
+        ext[f] = max(0.0, min(1.0, (ratio - R_CURL) / (R_OPEN - R_CURL))) * active
+
+    up = [f for f in ext if ext[f] > 0.5]          <span class="c"># 07의 Logic 이진화</span>
+    n = len(up)
+    rock     = active if n == 0 else 0.0           <span class="c"># 07의 곱셈 3개 = if 세 줄</span>
+    paper    = active if n == 4 else 0.0
+    scissors = active if (n == 2 and 'index' in up and 'middle' in up) else 0.0
+
+    for name, val in list(ext.items()) + [('count', float(n)),
+            ('rock', rock), ('paper', paper), ('scissors', scissors)]:
+        c = scriptOp.appendChan(name)              <span class="c"># 채널을 직접 만든다</span>
+        c.vals = [val]</pre>
+<p>출력 → Lag(0.1) → <code>null_geo</code> → 07과 같은 손가락 미터 + 판정 텍스트.</p>
+
+<h2><span class="no">C</span>조절 노브</h2>
+<table>
+<tr><th>증상</th><th>어디를</th><th>어떻게</th></tr>
+<tr><td>주먹인데 바위가 안 됨</td><td class="k">R_CURL 0.95</td><td>올리기 (1.0)</td></tr>
+<tr><td>펴도 미터가 덜 참</td><td class="k">R_OPEN 1.25</td><td>내리기 (1.15)</td></tr>
+<tr><td>판정 깜빡임</td><td class="k">lag_smooth</td><td>0.15로</td></tr>
+</table>
+
+<h2><span class="no">D</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>코드를 고쳤는데 반응이 없어요</strong> — Script CHOP 본체가 아니라 <b>콜백 DAT</b>(<code>…_callbacks</code>)를 고쳐야 합니다. 저장하면 즉시 반영.</li>
+<li><strong>에러가 났어요</strong> — Script CHOP이 빨간색이면 텍스트포트(Alt+T)에 파이썬 에러가 찍힙니다. 대부분 오타.</li>
+<li><strong>어디서 죽었는지 모르겠어요</strong> — 이럴 땐 07이 그리워지는 순간. 중간값 디버깅은 CHOP 버전이 압도적으로 편합니다.</li>
+</ul>
+
+<h2><span class="no">E</span>더 가보기 — 코드라서 쉬운 것들</h2>
+<ul class="plain">
+<li><strong>🤙 샤카</strong> — <code>shaka = active if (n==1 and 'pinky' in up) else 0</code>… 엄지 불변량은 직접 설계해보세요.</li>
+<li><strong>숫자 세기</strong> — count 채널(0~4)로 씬 전환.</li>
+<li><strong>핀치 강도</strong> — <code>d3(thumb_tip, index_finger_tip)</code>을 손 크기로 나누면 거리 무관 핀치 — 05의 업그레이드.</li>
+<li><strong>2인 대결</strong> — 06 가이드의 확장과 동일: h2 채널로 복제해 승패 로직까지.</li>
+</ul>
+
+<div class="pagenav"><a href="week2_07_rpschop.html">← 07_RPS_Chop<span class="sub">순수 CHOP 가위바위보 — 회전 불변</span></a><span></span></div>
+</div>
+</body>
+</html>
