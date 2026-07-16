@@ -11,7 +11,7 @@ TouchDesigner 인터랙티브 아트 워크숍 자료입니다.
 | 자료 | 링크 |
 |---|---|
 | 📺 슬라이드 (웹) | [week2.html](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week2.html) |
-| 🎛 TD 완성본 | [TD/week2.zip](TD/week2.zip) — 압축 해제 후 .toe 실행 (경량판, [MediaPipe TD Plugin](https://github.com/torinmb/mediapipe-touchdesigner/releases)과 함께) |
+| 🎛 TD 완성본 | [TD/week2.toe](TD/week2.toe) — 경량판, [MediaPipe TD Plugin](https://github.com/torinmb/mediapipe-touchdesigner/releases)과 함께 실행 |
 
 **베이스별 빌드 가이드** — 완성 네트워크 · 단계별 파라미터 · 왜 이렇게 만드는지 · 트러블슈팅:
 
@@ -32,7 +32,7 @@ TouchDesigner 인터랙티브 아트 워크숍 자료입니다.
 |---|---|
 | 📺 슬라이드 (웹) | [week1.html](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week1.html) |
 | 📄 01_Basics 강의 PDF | [Basic/01_Basics.pdf](Basic/01_Basics.pdf) |
-| 🎛 TD 완성본 파일 | [TD/week1.zip](TD/week1.zip) — 압축 해제 후 .toe 실행. `01_Basic` · `02_Webcam` · `03_Audio` · `04_WaterMirror` |
+| 🎛 TD 완성본 파일 | [TD/week1.toe](TD/week1.toe) — `01_Basic` · `02_Webcam` · `03_Audio` · `04_WaterMirror` |
 
 ## 3주차 (7/23) — 아두이노 시리얼 *(예정)*
 
@@ -48,7 +48,7 @@ TouchDesigner 인터랙티브 아트 워크숍 자료입니다.
 | [02_Feedback.pdf](Basic/02_Feedback.pdf) | 피드백 — 잔상 · 루프 구조 |
 | [03_Sop.pdf](Basic/03_Sop.pdf) | SOP — 3D 지오메트리 기초 |
 | [04_Particle.pdf](Basic/04_Particle.pdf) | 파티클 시스템 |
-| [TD_Basic.zip](Basic/TD_Basic.zip) | 기초 연습용 TD 파일 (압축 해제 후 실행) |
+| [TD_Basic.toe](Basic/TD_Basic.toe) | 기초 연습용 TD 파일 |
 
 ---
 
@@ -58,5 +58,5 @@ TouchDesigner 인터랙티브 아트 워크숍 자료입니다.
 - **MediaPipe TD Plugin**: https://github.com/torinmb/mediapipe-touchdesigner — 설치 불필요, 릴리즈의 `.toe` 실행
 - **Arduino IDE** (3주차): https://www.arduino.cc/en/software
 
-TD 파일은 **zip 링크로 받으세요** — 깃헙의 Raw 보기로 저장하면 파일이 깨집니다. 노드를 클릭하면 파라미터 창 위 초록 코멘트가 안내합니다.
+TD 파일은 위 링크로 바로 받으세요 (깃헙 Raw 보기에서 ⌘S로 저장하면 깨질 수 있습니다). 노드를 클릭하면 파라미터 창 위 초록 코멘트가 안내합니다.
 공통 노드: **입력 → 정규화 → 매핑** — 소스만 바뀝니다.
