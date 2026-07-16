@@ -19,8 +19,8 @@ TouchDesigner 인터랙티브 아트 워크숍 자료입니다.
 |---|---|---|
 | `01_Hand` | 검지끝 = 허공 마우스 + 잔상 (손으로 그리는 빛) | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week2.html#g01) |
 | `02_Theremin` | 손 높이 = 음정 · 좌우 = 볼륨 (허공 테레민) | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week2.html#g02) |
-| `03_Pose` | 양 손목 거리 → 팔 벌리면 화면이 커진다 | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week2.html#g03) |
-| `04_TwoHands` | 두 손 사이 거리 → 화면이 숨쉰다 (확장 미션 1) | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week2.html#g04) |
+| `03_Pose` | 포즈 트래킹 — 손목 사이 거리를 선·숫자로 표시, 팔 벌리면 원이 커진다 | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week2.html#g03) |
+| `04_TwoHands` | 핸드 트래킹 — 두 손 거리를 선·숫자로 표시 + 바나나 블러 🍌 (확장 미션 1) | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week2.html#g04) |
 | `05_Pinch` | 핀치 → Logic → Trigger 폭발 (확장 미션 2) | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week2.html#g05) |
 | `06_RPS` | 가위바위보 ① 제스처 모델 (블랙박스) | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week2.html#g06) |
 | `07_RPS_Chop` | 가위바위보 ② 관절 기하학 · 순수 CHOP (회전 불변) | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week2.html#g07) |

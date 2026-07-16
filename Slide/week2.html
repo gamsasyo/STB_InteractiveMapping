@@ -1377,10 +1377,16 @@ right_wrist:x 0.22 ┘</pre>
 <table>
 <tr><th>파라미터</th><th>값</th></tr>
 <tr><td class="k">Resolution</td><td><code>1280 × 720</code></td></tr>
-<tr><td class="k">Radius X</td><td><code>0.05 + op('null_pose')['spread'] * 0.38</code></td></tr>
+<tr><td class="k">math_radius → limit_radius → null_radius</td><td>spread(0~1)를 <strong>0.05~0.43</strong>으로 리매핑+클램프 — 계산은 찹으로</td></tr>
+<tr><td class="k">Radius X</td><td><code>op('null_radius')['spread']</code> — 참조만</td></tr>
 <tr><td class="k">Radius Y</td><td><code>me.par.radiusx</code></td></tr>
 </table>
 <p>팔을 모으면 작은 점, 활짝 벌리면 화면을 채우는 원. <strong>몸이 파라미터 패널이 됐습니다.</strong></p>
+</div></div>
+
+<div class="bstep"><div class="sn">07</div><div>
+<h3><span class="chip top">거리 시각화</span>손목 사이에 선과 숫자</h3>
+<p>양 손목에 점, 그 사이에 선, 중점 위에 <code>spread</code> 값 — <strong>측정 자체가 화면에 보입니다.</strong> 구성은 <a href="week2_04_twohands.html">04_TwoHands</a>의 시각화와 동일: <code>null_pts</code>(x1 y1 x2 y2) → Circle 점 2개 + Rectangle 회전 선(<code>hypot</code>·<code>atan2</code>) + Text 숫자 → Over로 겹치기.</p>
 </div></div>
 
 <h2><span class="no">C</span>조절 노브</h2>
@@ -1388,7 +1394,7 @@ right_wrist:x 0.22 ┘</pre>
 <tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
 <tr><td>팔 스팬 캘리브레이션</td><td class="k">math_abs · From Range 2</td><td>팔 활짝 벌리고 spread가 1 되도록 (0.5~0.9)</td></tr>
 <tr><td>반응 속도</td><td class="k">lag_smooth</td><td>0.1 = 즉각 · 0.4 = 명상적</td></tr>
-<tr><td>원 크기 폭</td><td class="k">radiusx의 0.38</td><td>0.45면 화면 밖까지</td></tr>
+<tr><td>원 크기 폭</td><td class="k">math_radius · To Range</td><td>상한 0.5면 화면 밖까지</td></tr>
 </table>
 
 <h2><span class="no">D</span>안 될 때</h2>
@@ -1423,13 +1429,13 @@ right_wrist:x 0.22 ┘</pre>
     <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">out</span></div><span class="opname">null_dist</span><span class="krname">출구 ★</span></div>
   </div>
   <div class="net-row">
-    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">▒▒</span></div><span class="opname">noise_bg</span><span class="krname">임시 배경</span></div>
+    <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">🍌</span></div><span class="opname">banana</span><span class="krname">기본 바나나</span></div>
     <div class="wire"></div>
     <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">≈</span></div><span class="opname">blur_breath</span><span class="krname">숨쉬는 블러</span></div>
     <div class="wire"></div>
     <div class="node top"><div class="chassis"><span class="fam-tag">TOP</span><span class="viewer">out</span></div><span class="opname">null_out</span><span class="krname">완성</span></div>
   </div>
-  <p class="annot">noise_bg는 자리 표시용 — 여러분의 네트워크(웹캠·피드백·01_Hand의 빛)로 갈아끼우는 게 이 미션의 진짜 내용.</p>
+  <p class="annot">배경은 TD의 유명한 기본 바나나(Movie File In 디폴트) — 여러분의 네트워크(웹캠·피드백·01_Hand의 빛)로 갈아끼우는 게 이 미션의 진짜 내용. + 두 손 사이에 거리 선·숫자가 실시간으로 그려집니다.</p>
 </div>
 <div class="why"><b>노드.</b> 이번 주 모든 베이스는 같은 다섯 마디 — <code>Select → Math → Rename → Lag → Null</code>.
 소스(검지·손목·거리)와 매핑(빛·소리·블러)만 바뀝니다. 지난주 오디오 체인과도 같은 구조.</div>
@@ -1475,25 +1481,40 @@ right_wrist:x 0.22 ┘</pre>
 <h3><span class="chip top">Blur TOP</span>blur_breath — 매핑</h3>
 <table>
 <tr><th>파라미터</th><th>값</th></tr>
-<tr><td class="k">입력</td><td><code>noise_bg</code> (1280×720) — 나중에 갈아끼울 자리</td></tr>
-<tr><td class="k">Filter Size</td><td><code>1 + op('null_dist')['dist'] * 80</code></td></tr>
+<tr><td class="k">입력</td><td><code>banana</code> — Movie File In의 <strong>디폴트 이미지가 바나나</strong>라 외부 파일 없이 동작. 나중에 갈아끼울 자리</td></tr>
+<tr><td class="k">math_blur → limit_blur → null_blur</td><td>dist(0~1)를 Math로 <strong>1~32</strong> 리매핑 → Limit로 클램프 — <strong>계산은 찹으로</strong></td></tr>
+<tr><td class="k">Filter Size</td><td><code>op('null_blur')['dist']</code> — <strong>참조만</strong></td></tr>
 </table>
-<p>두 손을 모으면 또렷, 벌리면 화면이 안개처럼 풀어집니다.</p>
+<p>두 손을 모으면 바나나가 또렷, 벌리면 안개처럼 풀어집니다.</p>
+<div class="why"><b>★ 황금률: 계산은 찹으로, 익스프레션은 참조만.</b> <code>1 + x * 80</code> 같은 계산식을 파라미터에 숨기면 네트워크만 봐서는 안 보입니다. Math·Limit 노드로 빼면 값이 뷰어에 보이고, 노브가 어디 있는지 누구나 압니다.</div>
 </div></div>
 
 <div class="bstep"><div class="sn">04</div><div>
 <h3>★ 진짜 미션: 배경 갈아끼우기</h3>
 <ul class="plain">
-<li>noise_bg를 지우고 그 자리에 — 웹캠(Video Device In), <a href="week2_01_hand.html">01_Hand</a>의 null_out(손그림이 뭉개진다!), 지난주 만든 피드백 네트워크.</li>
+<li>banana를 지우고 그 자리에 — 웹캠(Video Device In), <a href="week2_01_hand.html">01_Hand</a>의 null_out(손그림이 뭉개진다!), 지난주 만든 피드백 네트워크.</li>
 <li>Blur 대신 — Transform(Scale) = 줌 인/아웃, Displace = 왜곡, HSV = 색.</li>
 <li>둘 다 — dist 하나로 Blur와 Scale을 동시에. 정규화된 채널은 몇 곳에든 꽂을 수 있으니까.</li>
 </ul>
 </div></div>
 
+<div class="bstep"><div class="sn">05</div><div>
+<h3><span class="chip top">거리 시각화</span>측정이 눈에 보이게</h3>
+<p>두 손 사이에 <strong>선과 숫자가 실시간으로 그려집니다</strong> — 신호가 보이면 디버깅도 연출도 됩니다.</p>
+<table>
+<tr><th>노드</th><th>핵심</th></tr>
+<tr><td class="k">sel_pts → rename → lag → null_pts</td><td>helpers의 <code>h1/h2:pinch_midpoint:x·y</code> 4채널을 <code>x1 y1 x2 y2</code>로</td></tr>
+<tr><td class="k">dot1 · dot2</td><td>Circle — 각 손 위치에 흰 점 (Center를 null_pts로 Referencing)</td></tr>
+<tr><td class="k">line_dist</td><td>Rectangle을 <strong>픽셀 단위로 회전</strong>시켜 선처럼: 길이 <code>math.hypot(dx*1280, dy*720)</code> · 각도 <code>math.degrees(math.atan2(...))</code> — 07의 피타고라스가 화면에 그려지는 것</td></tr>
+<tr><td class="k">text_dist</td><td>선의 중점 위에 <code>dist</code> 숫자 (f-string 익스프레션 — 채널은 <code>[0]</code>으로 float 캐스팅!)</td></tr>
+<tr><td class="k">over × 4</td><td>바나나 → 점2 → 선 → 숫자 겹치기. 시각화 알파 = <code>h1×h2 hand_active</code> — 두 손 있을 때만</td></tr>
+</table>
+</div></div>
+
 <h2><span class="no">C</span>안 될 때</h2>
 <ul class="plain">
 <li><strong>dist가 안 움직여요</strong> — 두 손이 다 화면에? helpers 뷰어에서 <code>h2:hand_active</code>도 1인지 확인.</li>
-<li><strong>블러가 너무 약해요/세요</strong> — 익스프레션의 <code>* 80</code>이 노브. GPU가 힘들어하면 60 이하로.</li>
+<li><strong>블러가 너무 약해요/세요</strong> — <code>math_blur</code>의 To Range(1~32)가 노브. GPU가 힘들면 상한을 낮추세요.</li>
 </ul>
 <ul class="plain">
 <li><strong>트래킹이 자꾸 끊겨요</strong> — 조명을 밝게, 배경과 손의 대비 확보, 카메라에서 50cm~1m. 품질의 절반은 조명입니다.</li>
@@ -1575,11 +1596,12 @@ Trigger       0     0     0     <span class="o">1.0</span>   0.7   0.4   0.2    
 <table>
 <tr><th>파라미터</th><th>값</th></tr>
 <tr><td class="k">Resolution</td><td><code>1280 × 720</code></td></tr>
-<tr><td class="k">Radius X</td><td><code>0.05 + op('null_pinch')['flash'] * 0.45</code></td></tr>
+<tr><td class="k">math_burst → limit_burst → null_burst</td><td>flash(0~1)를 <strong>0.05~0.5</strong>로 리매핑+클램프</td></tr>
+<tr><td class="k">Radius X</td><td><code>op('null_burst')['flash']</code> — 참조만</td></tr>
 <tr><td class="k">Radius Y</td><td><code>me.par.radiusx</code></td></tr>
-<tr><td class="k">Softness</td><td><code>0.005 + op('null_pinch')['flash'] * 0.15</code></td></tr>
+<tr><td class="k">Softness</td><td><code>0.02</code></td></tr>
 </table>
-<p>집는 순간 원이 확 커지며 가장자리가 풀어졌다가, 0.4초에 걸쳐 사그라듭니다. Softness에도 flash를 꽂아서 <strong>커질수록 부드러워지는</strong> 디테일.</p>
+<p>집는 순간 원이 확 커졌다가 0.4초에 걸쳐 사그라듭니다.</p>
 </div></div>
 
 <h2><span class="no">C</span>조절 노브</h2>
@@ -1587,7 +1609,7 @@ Trigger       0     0     0     <span class="o">1.0</span>   0.7   0.4   0.2    
 <tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
 <tr><td>핀치 판정 민감도</td><td class="k">logic_pinch · Bound Max</td><td>1단계에서 실측한 "집었을 때 값"보다 약간 크게</td></tr>
 <tr><td>펀치의 모양</td><td class="k">trigger_flash · Attack/Decay</td><td>Attack 0.001 = 스냅 · Decay 1.5 = 여운</td></tr>
-<tr><td>터지는 크기</td><td class="k">radiusx의 0.45</td><td>취향껏</td></tr>
+<tr><td>터지는 크기</td><td class="k">math_burst · To Range</td><td>취향껏</td></tr>
 </table>
 
 <h2><span class="no">D</span>안 될 때</h2>
@@ -1674,11 +1696,11 @@ h1:Pointing_Up  h1:Thumb_Up  h1:Thumb_Down  h1:ILoveYou  h1:None</pre>
 <h3><span class="chip top">Circle TOP × 3</span>확률 미터 — ML이 고민하는 모습</h3>
 <table>
 <tr><th>노드</th><th>Center X</th><th>Fill Color</th><th>Radius X (익스프레션)</th></tr>
-<tr><td class="k">circle_rock</td><td><code>-0.3</code></td><td>0.90 0.32 0.25</td><td><code>0.03 + op('null_rps')['rock'] * 0.12</code></td></tr>
-<tr><td class="k">circle_paper</td><td><code>0</code></td><td>0.55 0.78 0.42</td><td><code>0.03 + op('null_rps')['paper'] * 0.12</code></td></tr>
-<tr><td class="k">circle_scissors</td><td><code>0.3</code></td><td>0.63 0.52 0.85</td><td><code>0.03 + op('null_rps')['scissors'] * 0.12</code></td></tr>
+<tr><td class="k">circle_rock</td><td><code>-0.3</code></td><td>0.90 0.32 0.25</td><td><code>op('null_meter')['rock']</code></td></tr>
+<tr><td class="k">circle_paper</td><td><code>0</code></td><td>0.55 0.78 0.42</td><td><code>op('null_meter')['paper']</code></td></tr>
+<tr><td class="k">circle_scissors</td><td><code>0.3</code></td><td>0.63 0.52 0.85</td><td><code>op('null_meter')['scissors']</code></td></tr>
 </table>
-<p>공통: 1280×720 · Center Y <code>0.06</code> · Radius Y <code>me.par.radiusx</code> · BG 검정(알파 1). 두 개의 <span class="chip top">Add TOP</span>으로 셋을 합칩니다.</p>
+<p>공통: 1280×720 · Center Y <code>0.06</code> · Radius Y <code>me.par.radiusx</code> · BG 검정(알파 1). 미터 크기는 <code>null_rps → math_meter(0~1→0.03~0.15) → limit → null_meter</code>에서 참조 — <strong>계산은 찹으로.</strong> 두 개의 <span class="chip top">Add TOP</span>으로 셋을 합칩니다.</p>
 <div class="why"><b>왜 미터를 보여줄까?</b> 손모양이 애매하면 원 여러 개가 어중간하게 커집니다 — <b>ML이 고민하는 모습을 눈으로 보는 것.</b> 판정 결과만 보여주면 시스템이 왜 틀리는지 아무도 모릅니다. 확률을 노출하는 것이 디버깅이자 연출.</div>
 </div></div>
 
@@ -1705,7 +1727,7 @@ h1:Pointing_Up  h1:Thumb_Up  h1:Thumb_Down  h1:ILoveYou  h1:None</pre>
 <tr><th>바꾸고 싶은 것</th><th>어디를</th><th>어떻게</th></tr>
 <tr><td>심판의 깐깐함</td><td class="k">text 익스프레션의 0.5</td><td>0.7 = 확실할 때만 판정 · 0.3 = 후하게</td></tr>
 <tr><td>판정 반응 속도</td><td class="k">lag_smooth</td><td>0.05 = 즉각(깜빡임 감수) · 0.15 = 안정</td></tr>
-<tr><td>미터 크기</td><td class="k">radiusx의 * 0.12</td><td>취향껏</td></tr>
+<tr><td>미터 크기</td><td class="k">math_meter · To Range</td><td>취향껏</td></tr>
 </table>
 
 <h2><span class="no">D</span>안 될 때</h2>
@@ -1898,7 +1920,6 @@ def onCook(scriptOp):
 <li><strong>핀치 강도</strong> — <code>d3(thumb_tip, index_finger_tip)</code>을 손 크기로 나누면 거리 무관 핀치 — 05의 업그레이드.</li>
 <li><strong>2인 대결</strong> — 06 가이드의 확장과 동일: h2 채널로 복제해 승패 로직까지.</li>
 </ul></template>
-
 <script>
 (function(){
   const overlay = document.getElementById('goverlay');
@@ -1906,14 +1927,9 @@ def onCook(scriptOp):
   const host = document.getElementById('ghost');
   const shadow = host.attachShadow({mode: 'open'});
   const gbtns = [...overlay.querySelectorAll('.gbar button[data-g]')];
-  const FILE2KEY = {};
-  gbtns.forEach(b => FILE2KEY[b.dataset.g] = true);
-  let gcur = null;
-
   function render(key){
     const tpl = document.getElementById('tpl-' + key);
     if (!tpl) return;
-    gcur = key;
     shadow.innerHTML = '';
     shadow.appendChild(document.getElementById('tpl-gcss').content.cloneNode(true));
     const wrap = document.createElement('div');
@@ -1922,7 +1938,6 @@ def onCook(scriptOp):
     shadow.appendChild(wrap);
     gbtns.forEach(b => b.classList.toggle('on', b.dataset.g === key));
     gbody.scrollTop = 0;
-    /* 가이드 간 상호 링크 가로채기 */
     shadow.querySelectorAll('a').forEach(a => {
       const href = a.getAttribute('href') || '';
       const m = href.match(/week2_0(\d)_\w+\.html/);
@@ -1930,14 +1945,10 @@ def onCook(scriptOp):
     });
   }
   window.openGuide = function(key){
-    overlay.hidden = false;
-    render(key);
+    overlay.hidden = false; render(key);
     history.replaceState(null, '', '#' + key);
   };
-  function closeGuide(){
-    overlay.hidden = true;
-    history.replaceState(null, '', ' ');
-  }
+  function closeGuide(){ overlay.hidden = true; history.replaceState(null, '', ' '); }
   document.getElementById('gclose').addEventListener('click', closeGuide);
   gbtns.forEach(b => b.addEventListener('click', () => openGuide(b.dataset.g)));
   document.addEventListener('click', e => {
@@ -1947,7 +1958,6 @@ def onCook(scriptOp):
   document.addEventListener('keydown', e => {
     if (!overlay.hidden && e.key === 'Escape') { e.preventDefault(); closeGuide(); }
   }, true);
-  /* 해시로 직접 진입: week2.html#g03 (덱이 덮기 전 원본 해시 사용) */
   const h = window.__initHash || location.hash.slice(1);
   if (/^g0[1-8]$/.test(h)) openGuide(h);
   window.addEventListener('hashchange', () => {
