@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수퍼 테스트베드 LAB — 3주차 아두이노 시리얼</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper: #ffffff;
+    --ink: #141414;
+    --gray: #8d8d8d;
+    --faint: #ececec;
+    --accent: #e8820c;            /* Shin's annotation orange */
+    --panel: #1d1d21;             /* TD network editor dark */
+    --panel-grid: #26262b;
+    --node-body: #101012;
+    --fam-top: #a88bd4;           /* TOP purple */
+    --fam-chop: #8fbf6f;          /* CHOP green */
+    --fam-dat: #d46a9f;
+    --wire: #7a7a82;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "JetBrains Mono", monospace;
+    --sans: -apple-system, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", sans-serif;
+  }
+
+  html, body { height: 100%; background: #cfcfcf; font-family: var(--sans); color: var(--ink); }
+
+  .deck { height: 100%; overflow: hidden; position: relative; background: var(--paper); }
+
+  .slide {
+    position: absolute; inset: 0;
+    background: var(--paper);
+    display: none;
+    flex-direction: column;
+    padding: 5.5vh 6vw calc(3vh + 46px);
+  }
+  .slide.active { display: flex; animation: enter .34s ease-out; }
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slide.active { animation: none; }
+    .wave { animation: none !important; }
+  }
+
+  /* ── top label, footer ─────────────────────────── */
+  .slide-label {
+    font-family: var(--mono);
+    font-size: clamp(14px, 1.35vw, 20px);
+    font-weight: 700;
+    letter-spacing: .01em;
+  }
+  .slide-label .sub { color: var(--gray); font-weight: 400; }
+
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+
+  .footer {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--mono);
+    font-size: clamp(11px, .95vw, 14px);
+    color: var(--gray);
+    padding-top: 2.5vh;
+  }
+
+  /* ── type ──────────────────────────────────────── */
+  h1 { font-family: var(--mono); font-size: clamp(36px, 5.4vw, 84px); font-weight: 700; letter-spacing: -0.03em; text-wrap: balance; }
+  h2 { font-size: clamp(28px, 3.6vw, 56px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4vh; text-wrap: balance; }
+  p, li { font-size: clamp(16px, 1.75vw, 27px); line-height: 1.6; }
+  .muted { color: var(--gray); }
+  .accent { color: var(--accent); }
+  .big { font-size: clamp(26px, 3.4vw, 52px); font-weight: 800; line-height: 1.35; letter-spacing: -0.02em; }
+  .center { text-align: center; }
+  .slide a { color: var(--accent); text-underline-offset: 3px; }
+  code {
+    font-family: var(--mono);
+    background: var(--faint);
+    padding: .08em .4em;
+    border-radius: 5px;
+    font-size: .9em;
+  }
+
+  /* ── TD network panel ──────────────────────────── */
+  .td-panel {
+    position: relative;
+    background:
+      repeating-linear-gradient(0deg,  transparent 0 59px, var(--panel-grid) 59px 60px),
+      repeating-linear-gradient(90deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      var(--panel);
+    border-radius: 12px;
+    padding: 5vh 3.5vw;
+    overflow: hidden;
+  }
+  .td-panel .annot {
+    font-family: var(--mono);
+    color: var(--accent);
+    font-size: clamp(13px, 1.4vw, 21px);
+    line-height: 1.7;
+  }
+
+  .net-row { display: flex; align-items: center; gap: 0; }
+
+  .node { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .node .chassis {
+    width: clamp(104px, 11vw, 168px);
+    height: clamp(58px, 6.2vw, 96px);
+    background: var(--node-body);
+    border: 2px solid var(--fam, var(--fam-top));
+    border-radius: 6px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.35);
+  }
+  .node .chassis::before, .node .chassis::after {
+    content: ""; position: absolute; top: 18%; bottom: 18%; width: 5px;
+    background: var(--fam, var(--fam-top)); opacity: .85; border-radius: 2px;
+  }
+  .node .chassis::before { left: -3.5px; }
+  .node .chassis::after  { right: -3.5px; }
+  .node .fam-tag {
+    position: absolute; top: 5px; left: 8px;
+    font-family: var(--mono); font-size: clamp(8px, .75vw, 11px);
+    color: var(--fam, var(--fam-top)); letter-spacing: .08em;
+  }
+  .node .viewer { font-family: var(--mono); font-size: clamp(11px, 1.15vw, 17px); color: #cfcfd6; }
+  .node .opname { font-family: var(--mono); font-size: clamp(11px, 1.1vw, 16px); color: #b9b9c2; }
+  .node .krname { font-size: clamp(11px, 1.05vw, 16px); color: #77777f; }
+
+  .node.chop { --fam: var(--fam-chop); }
+  .node.top  { --fam: var(--fam-top); }
+
+  .wire { flex: 1 1 0; min-width: 26px; height: 2px; background: var(--wire); position: relative; margin: 0 2px; transform: translateY(calc(-1 * clamp(10px, 1.1vw, 16px))); }
+  .wire::after {
+    content: ""; position: absolute; right: -1px; top: 50%;
+    transform: translateY(-50%);
+    border-left: 8px solid var(--wire);
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+  .wire .io {
+    position: absolute; top: 8px; width: 100%; text-align: center;
+    font-family: var(--mono); font-size: clamp(9px, .9vw, 13px); color: #6d6d75;
+  }
+
+  /* ── tables ────────────────────────────────────── */
+  table { border-collapse: collapse; width: 100%; }
+  th, td {
+    padding: 1.5vh 1.4vw;
+    font-size: clamp(15px, 1.7vw, 26px);
+    text-align: left;
+    border-bottom: 1px solid var(--faint);
+    vertical-align: middle;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: clamp(12px, 1.15vw, 17px);
+    color: var(--gray);
+    font-weight: 500;
+    letter-spacing: .06em;
+    border-bottom: 2px solid var(--ink);
+  }
+  .chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(13px, 1.4vw, 21px);
+    padding: .18em .6em;
+    border-radius: 6px;
+    color: #fff;
+  }
+  .chip.top  { background: var(--fam-top); color: #1c1428; }
+  .chip.chop { background: var(--fam-chop); color: #16210f; }
+  .chip.dim  { background: var(--faint); color: var(--gray); }
+  td.today { font-weight: 700; color: var(--accent); }
+
+  /* ── schedule ──────────────────────────────────── */
+  .sched { display: grid; grid-template-columns: auto 1fr; row-gap: 0; }
+  .sched .t, .sched .what {
+    padding: 1.7vh 0;
+    border-bottom: 1px solid var(--faint);
+    display: flex; align-items: center;
+  }
+  .sched .t {
+    font-family: var(--mono);
+    font-size: clamp(15px, 1.7vw, 26px);
+    color: var(--gray);
+    padding-right: 3vw;
+  }
+  .sched .what { font-size: clamp(16px, 1.85vw, 28px); gap: .6em; }
+  .sched .hot .t { color: var(--accent); font-weight: 700; }
+  .sched .hot.what, .sched .what.hot { font-weight: 800; }
+  .sched .hot { position: relative; }
+  .sched .what.hot::before {
+    content: ""; position: absolute; left: -1.6vw; top: 22%; bottom: 22%;
+    width: 5px; background: var(--accent); border-radius: 3px;
+  }
+
+  /* ── list ──────────────────────────────────────── */
+  ul.clean { list-style: none; display: flex; flex-direction: column; gap: 2.4vh; }
+  ul.clean li { padding-left: 1.5em; position: relative; }
+  ul.clean li::before {
+    content: ""; position: absolute; left: 0; top: .58em;
+    width: .55em; height: .55em; border-radius: 2px;
+    background: var(--accent);
+  }
+  ul.clean li strong { font-weight: 800; }
+
+  /* ── roadmap ───────────────────────────────────── */
+  .roadmap { display: flex; flex-direction: column; }
+  .step {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    align-items: center;
+    gap: 2vw;
+    padding: 1.55vh 1.5vw;
+    border-bottom: 1px solid var(--faint);
+  }
+  .step .n {
+    font-family: var(--mono);
+    font-size: clamp(15px, 1.6vw, 24px);
+    color: var(--gray);
+    width: 2em;
+  }
+  .step .op {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(15px, 1.7vw, 26px);
+    padding: .2em .6em;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .step .op.top  { background: var(--fam-top); color: #1c1428; }
+  .step .op.chop { background: var(--fam-chop); color: #16210f; }
+  .step .desc { font-size: clamp(15px, 1.75vw, 27px); }
+  .step .tag { font-family: var(--mono); font-size: clamp(11px, 1.1vw, 16px); color: var(--gray); white-space: nowrap; }
+  .step.hot { background: #fdf3e7; border-radius: 10px; border-bottom-color: transparent; }
+  .step.hot .n, .step.hot .tag { color: var(--accent); font-weight: 700; }
+  .step.hot .desc { font-weight: 800; }
+
+  /* ── mission cards ─────────────────────────────── */
+  .missions { display: grid; grid-template-columns: 1fr 1fr; gap: 2vh 1.6vw; }
+  .mcard {
+    border: 1.5px solid var(--faint);
+    border-radius: 12px;
+    padding: 2.2vh 1.6vw;
+    display: flex; flex-direction: column; gap: .8vh;
+  }
+  .mcard .mnum {
+    font-family: var(--mono);
+    font-size: clamp(11px, 1.05vw, 15px);
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: .1em;
+  }
+  .mcard h3 { font-size: clamp(17px, 1.9vw, 29px); font-weight: 800; }
+  .mcard p { font-size: clamp(13px, 1.45vw, 22px); line-height: 1.55; color: #444; }
+
+  /* ── pipeline (입력→정규화→매핑) ───────────────── */
+  .pipe { display: flex; align-items: stretch; gap: 0; }
+  .pipe .stage {
+    flex: 1;
+    border: 1.5px solid var(--faint);
+    border-radius: 12px;
+    padding: 2.6vh 1.4vw;
+    text-align: center;
+    display: flex; flex-direction: column; gap: 1.2vh; justify-content: center;
+  }
+  .pipe .stage.hot { border-color: var(--accent); background: #fdf3e7; }
+  .pipe .stage .eyebrow {
+    font-family: var(--mono);
+    font-size: clamp(12px, 1.15vw, 17px);
+    letter-spacing: .14em;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .pipe .stage .what { font-size: clamp(16px, 1.9vw, 29px); font-weight: 800; }
+  .pipe .stage .how { font-size: clamp(12px, 1.3vw, 20px); color: var(--gray); }
+  .pipe .arrow {
+    align-self: center;
+    font-family: var(--mono);
+    font-size: clamp(22px, 2.6vw, 40px);
+    color: var(--ink);
+    padding: 0 1vw;
+  }
+
+  /* ── keys table ────────────────────────────────── */
+  .keys .k { font-family: var(--mono); white-space: nowrap; }
+
+  /* ── wave word (몸 컨트롤러) ────────────────────── */
+  .wave { display: inline-block; animation: wave 4.2s ease-in-out infinite; transform-origin: 70% 80%; }
+  @keyframes wave {
+    0%, 84%, 100% { transform: none; }
+    87% { transform: rotate(-2deg) translateY(-2px); }
+    90% { transform: rotate(2.2deg) translateY(2px); }
+    93% { transform: rotate(-1.6deg); }
+    96% { transform: rotate(1deg); }
+  }
+
+  /* ── hand landmark figure ──────────────────────── */
+  .hand-fig { display: flex; align-items: center; gap: 3vw; }
+  .hand-fig svg { flex: 0 0 auto; height: min(58vh, 34vw); }
+  .hand-fig .legend { display: flex; flex-direction: column; gap: 1.6vh; min-width: 0; }
+  .hand-fig .legend .row {
+    display: flex; align-items: baseline; gap: 1vw;
+    font-size: clamp(14px, 1.6vw, 25px);
+  }
+  .hand-fig .legend .row code { white-space: nowrap; }
+  .hand-fig .legend .idx {
+    font-family: var(--mono); font-weight: 700; color: var(--accent);
+    width: 2.2em; flex: 0 0 auto;
+  }
+
+  /* ── 21 dots ───────────────────────────────────── */
+  .dots { display: flex; justify-content: center; gap: .55vw; margin-top: 3.2vh; }
+  .dots i { width: clamp(8px, .9vw, 14px); height: clamp(8px, .9vw, 14px); border-radius: 50%; background: var(--fam-chop); }
+  .dots i:nth-child(4n) { background: var(--accent); }
+
+  /* ── TOC slide ─────────────────────────────────── */
+  .toc { display: flex; flex-direction: column; }
+  .toc-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 2.2vw;
+    padding: 2.1vh 1vw;
+    border-bottom: 1px solid var(--faint);
+    cursor: pointer;
+  }
+  .toc-item:hover { background: #fdf3e7; }
+  .toc-item .cnum {
+    font-family: var(--mono);
+    font-size: clamp(14px, 1.5vw, 22px);
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .toc-item .ctitle { font-size: clamp(19px, 2.3vw, 36px); font-weight: 800; letter-spacing: -0.01em; }
+  .toc-item .ctitle .muted { font-weight: 400; font-size: .72em; }
+  .toc-item .cpage { font-family: var(--mono); font-size: clamp(12px, 1.15vw, 17px); color: var(--gray); }
+
+  /* ── bottom navigation bar ─────────────────────── */
+  .navbar {
+    position: fixed; left: 0; right: 0; bottom: 4px;
+    height: 42px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px;
+    background: rgba(255,255,255,.94);
+    border-top: 1px solid var(--faint);
+    backdrop-filter: blur(6px);
+    z-index: 10; user-select: none;
+  }
+  .navbar .chapters { display: flex; gap: 4px; overflow-x: auto; }
+  .navbar button {
+    appearance: none; border: 0; background: none;
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--gray);
+    padding: 6px 10px; border-radius: 6px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .navbar button:hover { background: var(--faint); color: var(--ink); }
+  .navbar button.on { color: var(--accent); font-weight: 700; background: #fdf3e7; }
+  .navbar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .navbar .meta { font-family: var(--mono); font-size: 12px; color: var(--gray); white-space: nowrap; padding-left: 12px; }
+
+  .progress {
+    position: fixed; left: 0; bottom: 0; height: 4px;
+    background: var(--accent);
+    width: 0; z-index: 11;
+    transition: width .25s ease;
+  }
+
+
+  /* ── 가이드 오버레이 리더 ─────────────────── */
+  .goverlay { position: fixed; inset: 0; background: #fff; z-index: 60; display: flex; flex-direction: column; }
+  .goverlay[hidden] { display: none; }
+  .gbar {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--faint);
+    font-family: var(--mono); font-size: 13px; background: rgba(255,255,255,.97);
+  }
+  .gbar button {
+    appearance: none; border: 0; background: none; cursor: pointer;
+    font-family: var(--mono); font-size: 12.5px; color: var(--gray);
+    padding: 6px 10px; border-radius: 6px; white-space: nowrap;
+  }
+  .gbar button:hover { background: var(--faint); color: var(--ink); }
+  .gbar button.on { color: var(--accent); font-weight: 700; background: #fdf3e7; }
+  .gbar button.gclose { color: var(--ink); font-weight: 700; margin-right: 6px; }
+  .gbar .ghint { margin-left: auto; color: var(--gray); font-size: 12px; }
+  .gbody { flex: 1; overflow-y: auto; }
+
+  @media print {
+    html, body { background: #fff; }
+    .deck { height: auto; overflow: visible; }
+    .slide { position: relative; display: flex !important; height: 100vh; page-break-after: always; }
+    .navbar, .progress { display: none; }
+  }
+
+  /* ── week3: serial stream ──────────────────────── */
+  .stream {
+    font-family: var(--mono);
+    font-size: clamp(17px, 2.1vw, 32px);
+    background: var(--panel); color: var(--fam-chop);
+    border-radius: 12px; padding: 3vh 3vw; line-height: 1.85;
+    overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.5), 0 8px 26px rgba(0,0,0,.3);
+  }
+  .stream .row { opacity: .38; transition: opacity .3s; }
+  .stream .row.live { opacity: 1; color: #fff; }
+  .stream .row .lbl { color: var(--gray); }
+  .stream .cur { color: var(--accent); }
+
+  /* ── week3: shock scale (mA) ────────────────────── */
+  .shock { display: flex; flex-direction: column; gap: 1.5vh; }
+  .shock .lvl { display: grid; grid-template-columns: 6.2em 1fr auto; align-items: center; gap: 1.4vw; }
+  .shock .lvl .ma { font-family: var(--mono); font-weight: 700; text-align: right; font-size: clamp(14px, 1.6vw, 24px); }
+  .shock .bar { height: clamp(16px, 2vw, 30px); background: var(--faint); border-radius: 6px; overflow: hidden; }
+  .shock .bar i { display: block; height: 100%; border-radius: 6px; }
+  .shock .lvl .cap { font-size: clamp(12px, 1.35vw, 20px); color: var(--gray); white-space: nowrap; }
+  .shock .lvl.safe .ma { color: var(--fam-chop); }
+  .shock .lvl.danger .ma { color: #d9484e; }
+
+  /* ── week3: bridge card (키트 자료로) ───────────── */
+  .bridge {
+    border: 2.5px dashed var(--accent); border-radius: 18px; background: #fdf3e7;
+    padding: 4.5vh 4vw; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 2vh;
+  }
+  .kitbox {
+    display: flex; flex-direction: column; gap: 1.1vh;
+    padding: 2.4vh 3.2vw; background: #fff;
+    border: 1.5px solid var(--faint); border-radius: 12px;
+    font-size: clamp(15px, 1.8vw, 27px); text-align: left;
+  }
+  .kitbox .kb { display: flex; gap: .8em; align-items: baseline; }
+  .kitbox .kb .p { font-family: var(--mono); color: var(--accent); font-weight: 700; white-space: nowrap; }
+
+  /* ── week3: pin/wiring mini ─────────────────────── */
+  .pins { font-family: var(--mono); font-size: clamp(14px, 1.7vw, 26px); line-height: 2; }
+  .pins .pin { color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- 0. 타이틀 -->
+  <section class="slide">
+    <div class="slide-label">수퍼 테스트베드 인터랙티브 매핑 LAB <span class="sub">— 3주차</span></div>
+    <div class="body">
+      <h1>바깥 세상의<br>숫자를 읽다</h1>
+      <p class="big" style="margin-top:3vh;">아두이노 <span class="accent">시리얼</span> — 센서가 CHOP이 되는 날</p>
+      <p class="muted" style="margin-top:2vh;">웹캠 대신 센서. 나머지는 지난주 그대로.</p>
+    </div>
+    <div class="footer"><span>테크멘토 신재영 · 7/23</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 1. TOC -->
+  <section class="slide">
+    <div class="slide-label">Contents <span class="sub">— 오늘 우리가 가는 길</span></div>
+    <div class="body">
+      <div class="toc" id="toc"></div>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 2. 오늘의 미션 -->
+  <section class="slide">
+    <div class="slide-label">Arduino Serial <span class="sub">— 오늘의 목표</span></div>
+    <div class="body">
+      <p class="big center">웹캠 대신 <span class="accent">센서</span>.<br>나머지는 지난주 그대로.</p>
+      <ul class="clean" style="margin-top:5vh;">
+        <li><strong>아두이노 = 숫자 뱉는 상자</strong> — 깊게 안 배웁니다. 스케치(코드)는 복붙으로 드려요</li>
+        <li><strong>우리가 배우는 건 "통로"</strong> — 그 숫자가 어떻게 TD로 흘러들어오나 = <span class="accent">시리얼</span></li>
+        <li><strong>센서가 뭐든 TD는 똑같다</strong> — 소스만 바뀌는 그 그림, 오늘로 세 번째</li>
+      </ul>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 3. 오늘의 흐름 -->
+  <section class="slide">
+    <div class="slide-label">Arduino Serial <span class="sub">— 오늘의 흐름</span></div>
+    <div class="body">
+      <div class="sched">
+        <div class="t">14:00</div><div class="what">도입 · 지난주 복습</div>
+        <div class="t hot">14:20</div><div class="what hot">시리얼 · 감전 안심 · 드라이버 개념</div>
+        <div class="t">14:50</div><div class="what">🔌 <span class="muted">[키트 자료]</span> 센서 연결 · IDE 코드 · 업로드</div>
+        <div class="t hot">15:30</div><div class="what hot">TD: Serial DAT → … → Null 매핑</div>
+        <div class="t">16:20</div><div class="what">휴식</div>
+        <div class="t">16:30</div><div class="what">센서 갈아끼우기 · 자유 확장</div>
+        <div class="t hot">17:00</div><div class="what hot">프로젝트 소개 · 브레인스토밍 · 멘토링 ①</div>
+      </div>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 4. 복습: 입력→정규화→매핑 -->
+  <section class="slide">
+    <div class="slide-label">Recap <span class="sub">— 그 그림, 또 그대로</span></div>
+    <div class="body">
+      <div class="pipe">
+        <div class="stage hot">
+          <span class="eyebrow">INPUT</span>
+          <span class="what">입력</span>
+          <span class="how"><s>웹캠 · 손 · 몸</s><br><strong class="accent" style="font-size:1.2em;">오늘: 센서</strong></span>
+        </div>
+        <div class="arrow">→</div>
+        <div class="stage">
+          <span class="eyebrow">NORMALIZE</span>
+          <span class="what">정규화</span>
+          <span class="how">0~1 공용어로 번역<br>Math · Lag</span>
+        </div>
+        <div class="arrow">→</div>
+        <div class="stage">
+          <span class="eyebrow">MAP</span>
+          <span class="what">매핑</span>
+          <span class="how">비주얼 · 사운드<br>파라미터에 꽂기</span>
+        </div>
+      </div>
+      <p style="margin-top:4.5vh;" class="center">1주차 마우스·오디오, 2주차 MediaPipe, <strong>오늘 센서.</strong><br><span class="muted">머리는 똑같습니다. 바뀌는 건 <span class="accent">입력 한 칸</span>뿐 — 이제 물리 세계.</span></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 5. 아두이노 = 숫자 뱉는 상자 -->
+  <section class="slide">
+    <div class="slide-label">Arduino <span class="sub">— 아두이노는 "숫자 뱉는 상자"</span></div>
+    <div class="body">
+      <ul class="clean">
+        <li><strong>아두이노를 깊게 배우지 않습니다</strong> — 오늘 아두이노의 역할은 딱 하나, <strong>센서 값을 숫자로 뱉는 것</strong></li>
+        <li><strong>스케치(코드)는 복붙으로</strong> — 전문가가 될 필요 없어요. 센서마다 완성 코드를 드립니다</li>
+        <li><strong>진짜 배우는 건 그 다음</strong> — 그 숫자가 어떻게 TouchDesigner로 흘러들어오나 = <span class="accent">시리얼 통신</span></li>
+        <li><strong>2주차와 같은 자리</strong> — MediaPipe도 "웹캠 → 숫자"였죠. 아두이노는 "센서 → 숫자". <span class="accent">소스만 바뀜</span></li>
+      </ul>
+      <div class="td-panel" style="margin-top:3.5vh; padding:3vh 3vw;">
+        <div class="annot">[물리 세계] &nbsp;→&nbsp; [아두이노 = 상자] &nbsp;→&nbsp; 시리얼 &nbsp;→&nbsp; [TouchDesigner]<br>&nbsp;&nbsp;손·거리·기울기 &nbsp;&nbsp;&nbsp;&nbsp;(복붙 스케치) &nbsp;&nbsp;&nbsp; 512↵ &nbsp;&nbsp;&nbsp;&nbsp; Serial DAT → CHOP → 매핑</div>
+      </div>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 6. 안심 코너: 감전 -->
+  <section class="slide">
+    <div class="slide-label">🔌 안심 코너 <span class="sub">— 5V, 감전 안 됩니다</span></div>
+    <div class="body">
+      <p class="center" style="margin-bottom:3.5vh;">위험한 건 <s>전압(V)</s>이 아니라 <strong class="accent">몸에 흐르는 전류(mA)</strong>.<br><span class="muted">전류 = 전압 ÷ 저항. 마른 손 저항 ≈ 100,000Ω → 5V로는 거의 안 흐름.</span></p>
+      <div class="shock">
+        <div class="lvl safe"><span class="ma">0.05 mA</span><span class="bar"><i style="width:1%; background:var(--fam-chop);"></i></span><span class="cap">5V 손터치 — 못 느낌 (USB와 같은 5V)</span></div>
+        <div class="lvl"><span class="ma">1 mA</span><span class="bar"><i style="width:8%; background:#c9c9c9;"></i></span><span class="cap">겨우 "찌릿?" 느끼기 시작</span></div>
+        <div class="lvl"><span class="ma">10 mA</span><span class="bar"><i style="width:35%; background:#e0a94e;"></i></span><span class="cap">근육이 말 안 들음</span></div>
+        <div class="lvl danger"><span class="ma">100 mA</span><span class="bar"><i style="width:100%; background:#d9484e;"></i></span><span class="cap">심장 위험</span></div>
+      </div>
+      <p class="center" style="margin-top:3.5vh;">조심할 건 사람이 아니라 <strong>보드</strong> — <code>5V ●━━● GND</code> 직접 쇼트만 피하기.<br><span class="muted">사람은 5V로 절대 안 다칩니다. 안심하고 만지세요.</span></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 7. 드라이버 -->
+  <section class="slide">
+    <div class="slide-label">💾 드라이버 <span class="sub">— 짭퉁 우노 SMD R3 = CH340 칩</span></div>
+    <div class="body">
+      <p style="margin-bottom:2.5vh;">정품 우노는 드라이버가 필요 없지만, <strong>호환보드(SMD R3)는 CH340 칩</strong>이라 드라이버가 필요할 수 있어요. <strong class="accent">포트 이름</strong>으로 3초 만에 판별됩니다.</p>
+      <table>
+        <tr><th>맥에서 <code>ls /dev/cu.*</code></th><th>의미</th></tr>
+        <tr><td class="k">cu.usbmodem…</td><td>✓ 네이티브 — 드라이버 불필요</td></tr>
+        <tr><td class="k">cu.usbserial… / wchusbserial…</td><td>CH340 — 이미 뜨면 인식된 것 (OK)</td></tr>
+        <tr><td class="k">아무것도 안 뜸</td><td class="today">✗ 드라이버 설치 필요</td></tr>
+      </table>
+      <div class="pins" style="margin-top:2vh;">
+        🍎 <span class="pin">macOS</span> — 최신 Sonoma/Sequoia는 내장. 안 되면 <code>brew install --cask wch-ch34x-usb-serial-driver</code><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;⚠️ 애플실리콘: 시스템설정 &gt; 개인정보보호 &gt; 보안 &gt; "Jiangsu Qinheng" 허용 → 재시작<br>
+        🪟 <span class="pin">Windows</span> — <code>CH341SER.EXE</code> (WCH 공식) 실행 → INSTALL
+      </div>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 8. 시리얼이란 -->
+  <section class="slide">
+    <div class="slide-label">Serial <span class="sub">— 한 줄씩 흐르는 숫자</span></div>
+    <div class="body">
+      <div class="stream">
+        <div class="row">512</div>
+        <div class="row">513</div>
+        <div class="row live">738<span class="cur"> ▍</span></div>
+      </div>
+      <ul class="clean" style="margin-top:3.5vh;">
+        <li><strong>한 줄 = 한 순간</strong> — 아두이노가 <code>Serial.println(값)</code> 할 때마다 한 줄이 흘러나옴</li>
+        <li><strong>Baud rate(전송 속도)를 맞춰야</strong> — 아두이노와 TD가 같은 숫자(보통 <code>9600</code>)여야 안 깨짐</li>
+        <li><strong class="accent">한 포트 = 한 명 독점</strong> — IDE 시리얼 모니터가 열려 있으면 TD가 포트를 못 엽니다. <strong>모니터 닫고 TD 열기</strong></li>
+      </ul>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 9. 브릿지: 키트 자료로 -->
+  <section class="slide">
+    <div class="slide-label">🔌 실습 <span class="sub">— 여기서 잠깐, 키트 강의자료로</span></div>
+    <div class="body">
+      <div class="bridge">
+        <p class="big">센서 연결 · 회로 · IDE 코드는<br>키트 자료가 잘 만들어뒀습니다</p>
+        <div class="kitbox">
+          <div class="kb"><span class="p">📖 에듀이노 스타터키트 입문편 강의자료 v4.1</span></div>
+          <div class="kb"><span class="p">1강 · 5p~</span><span>센서 확장 쉴드 + <strong>가변저항</strong> 실습</span></div>
+          <div class="kb"><span class="p">3강 · 82p~</span><span><strong>초음파 HC-SR04</strong> 실습</span></div>
+        </div>
+        <p class="muted">키트 구매 시 구글드라이브로 제공된 자료입니다 — 각자 열어주세요.<br><a href="https://eduino.kr/product/detail.html?product_no=141" target="_blank" rel="noopener">eduino.kr — 스타터 키트 입문편</a></p>
+      </div>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 10. 복귀 -->
+  <section class="slide">
+    <div class="slide-label">Serial <span class="sub">— 돌아왔습니다: 이제 이 숫자를 TD로</span></div>
+    <div class="body">
+      <p class="big center">시리얼 모니터에 숫자가<br>손 따라 움직인다면 — <span class="accent">통신 성공 ✓</span></p>
+      <ul class="clean" style="margin-top:5vh;">
+        <li><strong>★ 시리얼 모니터를 닫으세요</strong> — 한 포트는 한 명만. 모니터가 잡고 있으면 TD가 못 읽어요</li>
+        <li><strong>TouchDesigner에서 Serial DAT 열기</strong> — 같은 포트, 같은 Baud(9600)</li>
+        <li><strong>다음은 지난주와 똑같은 체인</strong> — 숫자 → 정규화 → 매핑</li>
+      </ul>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 11. TD 파이프라인 -->
+  <section class="slide">
+    <div class="slide-label">TD Build <span class="sub">— Serial DAT → … → Null · 오늘의 공통 노드</span></div>
+    <div class="body">
+      <div class="roadmap">
+        <div class="step"><span class="n">1</span><span class="op">Serial DAT</span><span class="desc">포트를 열어 숫자를 받음</span><span class="tag">Port · Baud 9600</span></div>
+        <div class="step"><span class="n">2</span><span class="op">Convert DAT</span><span class="desc">쉼표를 열로 쪼갬 (여러 값일 때)</span><span class="tag">Split Cells at ,</span></div>
+        <div class="step"><span class="n">3</span><span class="op chop">DAT to CHOP</span><span class="desc">열 하나 = 채널 하나</span><span class="tag">chan1, chan2…</span></div>
+        <div class="step"><span class="n">4</span><span class="op chop">Rename</span><span class="desc">채널에 이름 붙이기</span><span class="tag">chan1 → dist</span></div>
+        <div class="step hot"><span class="n">5</span><span class="op chop">Math</span><span class="desc">0~1023 → 0~1 리매핑</span><span class="tag">From/To Range</span></div>
+        <div class="step"><span class="n">6</span><span class="op chop">Lag</span><span class="desc">값을 부드럽게</span><span class="tag">0.1</span></div>
+        <div class="step"><span class="n">7</span><span class="op chop">Null</span><span class="desc">참조용 종착역</span><span class="tag">null_sensor</span></div>
+      </div>
+      <p class="center" style="margin-top:3vh;"><strong>뒷부분(Rename→Math→Lag→Null)은 2주차와 완전히 동일.</strong> <span class="muted">바뀐 건 앞의 Serial DAT뿐.</span></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 12. CSV 약속 -->
+  <section class="slide">
+    <div class="slide-label">TD Build <span class="sub">— 여러 값 보내기 = CSV "약속"</span></div>
+    <div class="body">
+      <div class="stream" style="text-align:center;">
+        <span class="cur">512</span><span class="lbl">,</span><span class="cur">738</span><span class="lbl">,</span><span class="cur">45</span>
+        <div style="font-size:.5em; color:var(--gray); margin-top:1vh;">└ 손1 &nbsp;&nbsp;&nbsp; └ 손2 &nbsp;&nbsp;&nbsp; └ 거리</div>
+      </div>
+      <ul class="clean" style="margin-top:4vh;">
+        <li><strong>센서는 순서대로 숫자를 흘려보낸다</strong> — 쉼표로 이어 한 줄 (가볍고 안 깨짐)</li>
+        <li><strong class="accent">이름은 TouchDesigner가 붙인다</strong> — Rename으로 <code>chan1 → dist</code>. 아두이노는 멍청한 채로, 의미부여는 TD가</li>
+        <li><strong>JSON은?</strong> — 값이 복잡하거나 웹이랑 붙일 때. 실시간 센서엔 과함 → <span class="muted">4주차 프로젝트 확장 카드</span></li>
+      </ul>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 13. 센서 = 갈아끼우는 카드 -->
+  <section class="slide">
+    <div class="slide-label">Sensors <span class="sub">— 센서 = 갈아끼우는 카드. TD는 안 바뀐다</span></div>
+    <div class="body">
+      <table>
+        <tr><th>센서</th><th>스케치</th><th>보내는 값</th><th>채널</th><th>TD쪽</th></tr>
+        <tr><td><strong>가변저항</strong></td><td class="k">analogRead</td><td class="k">512</td><td><span class="chip chop">1</span></td><td>노브 = 손 x</td></tr>
+        <tr><td><strong>초음파 HC-SR04</strong></td><td class="k">pulseIn</td><td class="k">37</td><td><span class="chip chop">1</span></td><td class="today">거리 = 손 거리 (2주차!)</td></tr>
+        <tr><td><strong>MPU-6050</strong> <span class="muted">확장</span></td><td class="k">Wire (I2C)</td><td class="k">0.1,-0.98,…</td><td><span class="chip chop">6</span></td><td>기울기 = 회전</td></tr>
+      </table>
+      <p class="center" style="margin-top:2.5vh;"><strong>채널 개수만 다릅니다.</strong> <span class="muted">DAT to CHOP가 알아서 맞춰줘요 — "몇 개 나오나 세봐" 가 곧 교재.</span></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 14. 크로스토크 -->
+  <section class="slide">
+    <div class="slide-label">🤔 Q <span class="sub">— 왜 안 꽂은 핀도 값이 움직여요?</span></div>
+    <div class="body">
+      <p style="margin-bottom:3vh;">손터치 테스트에서 A0·A1이 비슷하게 출렁이는 건 <strong>버그가 아니라 원리</strong>예요. 두 가지가 겹칩니다:</p>
+      <ul class="clean">
+        <li><strong>① 네 몸 = 안테나 하나</strong> — 두 핀 다 "너"라는 같은 도체에 붙어 같은 60Hz 노이즈를 주움 → 같이 움직임</li>
+        <li><strong>② ADC 멀티플렉서 크로스토크</strong> — 아날로그 핀들이 ADC 하나를 돌려쓰기. 앞 핀 전하가 다음 핀에 "묻어남"</li>
+        <li><strong class="accent">진짜 센서를 꽂으면 사라짐</strong> — 센서는 핀을 확실한 전압에 딱 물려줘요(낮은 임피던스). floating이 아니니 전염 끝</li>
+      </ul>
+      <p class="center muted" style="margin-top:3vh;">손터치 = 통신 확인용. 채널을 진짜로 분리하려면 → 가변저항 꽂는 순간 해결.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 15. 저항 언제 쓰나 -->
+  <section class="slide">
+    <div class="slide-label">Resistor <span class="sub">— 저항, 언제 쓰나</span></div>
+    <div class="body">
+      <table>
+        <tr><th></th><th>저항</th><th>왜</th></tr>
+        <tr><td><strong>가변저항 · 초음파 · 자이로</strong></td><td><span class="chip chop">안 씀</span></td><td>센서/모듈이 알아서 처리</td></tr>
+        <tr><td><strong>LED 켜기</strong></td><td><span class="chip top">씀</span></td><td>없으면 LED가 탐 — 220~330Ω 하나 (확장 미션 때)</td></tr>
+        <tr><td><strong>생버튼</strong></td><td><span class="chip dim">코드로</span></td><td><code>INPUT_PULLUP</code> = 내부 저항, 외부 불필요</td></tr>
+      </table>
+      <p class="center" style="margin-top:3vh;"><strong>센서 확장 쉴드 V5.0</strong>을 우노에 얹으면 센서를 <strong class="accent">3핀(S·V·G)</strong>으로 바로 꽂아요.<br><span class="muted">브레드보드 배선도, 저항도 거의 안 건드림 → 회로 실수 리스크 ↓</span></p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 16. 확장 미션 -->
+  <section class="slide">
+    <div class="slide-label">Missions <span class="sub">— 확장 미션 (공통 빌드를 마친 분)</span></div>
+    <div class="body">
+      <div class="missions">
+        <div class="mcard"><span class="mnum">M1</span><h3>센서 2개 동시</h3><p>A0, A1 두 값을 CSV로. <code>Serial.print(a0); print(","); println(a1);</code> → 채널 2개</p></div>
+        <div class="mcard"><span class="mnum">M2</span><h3>초음파 = 손 거리</h3><p>2주차 손 거리 인터랙션을 초음파 거리로 재현. 같은 매핑, 물리 소스</p></div>
+        <div class="mcard"><span class="mnum">M3</span><h3>양방향 (TD → 아두이노)</h3><p>TD가 시리얼로 숫자를 <strong>보내서</strong> LED 밝기 제어 — 읽기의 반대</p></div>
+        <div class="mcard"><span class="mnum">BOSS</span><h3>MPU-6050 기울기</h3><p>6축 기울기 → 6채널. I2C 라이브러리. 회전으로 씬 굴리기</p></div>
+      </div>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 17. 프로젝트 소개 · 멘토링 -->
+  <section class="slide">
+    <div class="slide-label">Project <span class="sub">— 프로젝트 소개 · 브레인스토밍 · 멘토링 ①</span></div>
+    <div class="body">
+      <ul class="clean">
+        <li><strong>오늘부터 프로젝트가 시작됩니다</strong> — 4주차 제작, 5주차 중간과정 발표로 이어져요</li>
+        <li><strong>한 문장만</strong> — "내 센서/몸으로 <span class="accent">무엇을</span> 움직이고 싶은가"</li>
+        <li><strong>멘토와 1:1 방향 잡기</strong> — 아이디어를 입력→정규화→매핑 그림에 얹어보기</li>
+        <li><strong>버디 페어</strong> — 서로 다른 센서끼리 짝. "네 값이랑 내 값이 어떻게 다르게 생겼나"</li>
+      </ul>
+      <p class="center big" style="margin-top:5vh;">뭘 흔들고 싶은지, 한 문장.</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+  <!-- 18. 마무리 -->
+  <section class="slide">
+    <div class="slide-label">Wrap-up</div>
+    <div class="body">
+      <ul class="clean">
+        <li><strong>집에서 계속</strong> — 키트는 1인 1개. 스케치 복붙으로 혼자 센서 갈아끼우며 놀 수 있어요</li>
+        <li><strong>깃헙 자료</strong> — <code>github.com/gamsasyo/STB_InteractiveMapping</code> · 슬라이드 + <strong>공통 빌드 · 가변저항 · 초음파 가이드</strong>. 키트 강의자료는 에듀이노 제공(각자 보유)</li>
+        <li><strong class="accent">프로젝트 씨앗</strong> — "뭘 흔들고 싶은지" 한 문장 품고 다음 주에</li>
+      </ul>
+      <p style="margin-top:6vh;" class="big center">수고하셨습니다</p>
+    </div>
+    <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
+  </section>
+
+</div>
+
+<nav class="navbar" id="navbar">
+  <div class="chapters" id="chapters"></div>
+  <div class="meta" id="meta"></div>
+</nav>
+
+<div class="progress" id="progress"></div>
+
+<script>
+  window.__initHash = location.hash.slice(1);
+  const slides = [...document.querySelectorAll('.slide')];
+  const bar = document.getElementById('progress');
+  const meta = document.getElementById('meta');
+  let cur = 0;
+
+  const chapters = [
+    { num: '00', title: '인트로',   desc: '미션 · 오늘의 흐름',                       slide: 0 },
+    { num: '01', title: '복습',     desc: '입력→정규화→매핑 — 입력 칸만 바뀐다',       slide: 4 },
+    { num: '02', title: '시리얼',   desc: '숫자 상자 · 감전 안심 · 드라이버 · 시리얼',  slide: 5 },
+    { num: '03', title: '키트 실습', desc: '센서 연결·코드·업로드 (에듀이노 자료)',     slide: 9 },
+    { num: '04', title: 'TD 빌드',  desc: 'Serial DAT→…→Null · CSV · 센서 카드',      slide: 11 },
+    { num: '05', title: '프로젝트', desc: '확장 미션 · 소개 · 멘토링 ①',              slide: 16 },
+    { num: '06', title: '마무리',   desc: '집에서 · 정리',                            slide: 18 },
+  ];
+  const chapterOf = i => chapters.reduce((a, c, k) => i >= c.slide ? k : a, 0);
+
+  const toc = document.getElementById('toc');
+  chapters.forEach((c, k) => {
+    const el = document.createElement('div');
+    el.className = 'toc-item';
+    el.innerHTML = `<span class="cnum">${c.num}</span>` +
+      `<span class="ctitle">${c.title} &nbsp;<span class="muted">${c.desc}</span></span>` +
+      `<span class="cpage">p.${c.slide + 1}</span>`;
+    el.addEventListener('click', (e) => { e.stopPropagation(); show(c.slide); });
+    toc.appendChild(el);
+  });
+
+  const chBox = document.getElementById('chapters');
+  const navBtns = chapters.map((c, k) => {
+    const b = document.createElement('button');
+    b.textContent = `${c.num} ${c.title}`;
+    b.addEventListener('click', (e) => { e.stopPropagation(); show(c.slide); });
+    chBox.appendChild(b);
+    return b;
+  });
+
+  slides.forEach((s, k) => {
+    const last = s.querySelector('.footer span:last-child');
+    if (last && /^\d+\s*\/\s*\d+$/.test(last.textContent.trim())) {
+      last.textContent = `${k + 1} / ${slides.length}`;
+    }
+  });
+
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, k) => s.classList.toggle('active', k === cur));
+    const ch = chapterOf(cur);
+    navBtns.forEach((b, k) => b.classList.toggle('on', k === ch));
+    meta.textContent = `${cur + 1} / ${slides.length} · ←→ 이동 · 1~7 챕터 · F 전체화면`;
+    bar.style.width = ((cur + 1) / slides.length * 100) + '%';
+    if (location.hash !== '#' + (cur + 1)) history.replaceState(null, '', '#' + (cur + 1));
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (/INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    if (!document.getElementById('goverlay').hidden) return;
+
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(cur + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(cur - 1); }
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End') show(slides.length - 1);
+    if (e.key >= '1' && e.key <= String(chapters.length)) show(chapters[+e.key - 1].slide);
+    if (e.key.toLowerCase() === 't') show(1);
+    if (e.key.toLowerCase() === 'f') {
+      document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    }
+  });
+
+  if (new URLSearchParams(location.search).has('touch')) {
+    let tx0 = null;
+    document.addEventListener('touchstart', e => tx0 = e.touches[0].clientX);
+    document.addEventListener('touchend', e => {
+      if (tx0 === null) return;
+      const dx = e.changedTouches[0].clientX - tx0;
+      if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1));
+      tx0 = null;
+    });
+  }
+
+  window.addEventListener('hashchange', () => {
+    const n = parseInt(location.hash.slice(1)) - 1;
+    if (!isNaN(n) && n !== cur) show(n);
+  });
+
+  show(parseInt(location.hash.slice(1)) - 1 || 0);
+</script>
+
+<div class="goverlay" id="goverlay" hidden>
+  <div class="gbar">
+    <button class="gclose" id="gclose">✕ 슬라이드로</button>
+    <button data-g="g01">공통 빌드</button><button data-g="g02">가변저항</button><button data-g="g03">초음파</button>
+    <span class="ghint">Serial DAT → Convert → DAT to CHOP → Rename → Math → Lag → Null</span>
+  </div>
+  <div class="gbody"><div id="ghost"></div></div>
+</div>
+
+<template id="tpl-gcss"><style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :host {
+    --paper: #ffffff; --ink: #141414; --gray: #8d8d8d; --faint: #ececec;
+    --accent: #e8820c; --panel: #1d1d21; --panel-grid: #26262b; --node-body: #101012;
+    --fam-top: #a88bd4; --fam-chop: #8fbf6f; --wire: #7a7a82;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "JetBrains Mono", monospace;
+    --sans: -apple-system, "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", sans-serif;
+  }
+  :host { display: block; background: #fff; color: var(--ink); font-family: var(--sans); line-height: 1.65; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 90px; }
+  .crumb { font-family: var(--mono); font-size: 13px; color: var(--gray); margin-bottom: 14px; }
+  .crumb b { color: var(--accent); }
+  h1 { font-family: var(--mono); font-size: clamp(30px, 5vw, 46px); letter-spacing: -0.02em; margin-bottom: 10px; }
+  .lead { font-size: clamp(17px, 2.2vw, 21px); color: #444; margin-bottom: 18px; }
+  .lead strong { color: var(--accent); }
+  .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 34px; }
+  .meta span { font-family: var(--mono); font-size: 12.5px; color: var(--gray);
+    border: 1px solid var(--faint); border-radius: 999px; padding: 4px 12px; }
+  h2 { font-size: clamp(21px, 2.6vw, 27px); font-weight: 800; letter-spacing: -0.01em;
+    margin: 46px 0 16px; padding-top: 14px; border-top: 2px solid var(--ink); }
+  h2 .no { font-family: var(--mono); color: var(--accent); margin-right: 8px; }
+  p { font-size: clamp(15px, 1.9vw, 17px); margin-bottom: 12px; }
+  .muted { color: var(--gray); }
+  .accent { color: var(--accent); }
+  code { font-family: var(--mono); background: var(--faint); padding: .1em .4em; border-radius: 5px; font-size: .88em; }
+  pre { font-family: var(--mono); font-size: 13.5px; line-height: 1.7; background: var(--panel); color: #cfcfd6;
+    border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 14px 0; }
+  pre .c { color: #7a7a82; } pre .o { color: var(--accent); } pre .g { color: var(--fam-chop); }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0 22px; }
+  th, td { padding: 10px 12px; font-size: 14.5px; text-align: left; border-bottom: 1px solid var(--faint); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 12px; color: var(--gray); font-weight: 500; letter-spacing: .06em; border-bottom: 2px solid var(--ink); }
+  td.k { font-family: var(--mono); white-space: nowrap; font-weight: 700; }
+  .chip { display: inline-block; font-family: var(--mono); font-weight: 700; font-size: 12.5px;
+    padding: .18em .55em; border-radius: 6px; }
+  .chip.top { background: var(--fam-top); color: #1c1428; }
+  .chip.chop { background: var(--fam-chop); color: #16210f; }
+  .chip.dat { background: #d46a9f; color: #2a0f1e; }
+  .td-panel { background:
+      repeating-linear-gradient(0deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      repeating-linear-gradient(90deg, transparent 0 59px, var(--panel-grid) 59px 60px),
+      var(--panel);
+    border-radius: 12px; padding: 28px 22px; overflow-x: auto; margin: 16px 0 8px; }
+  .net-row { display: flex; align-items: center; min-width: max-content; }
+  .net-row + .net-row { margin-top: 26px; }
+  .node { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .node .chassis { width: 118px; height: 56px; background: var(--node-body);
+    border: 2px solid var(--fam, var(--fam-top)); border-radius: 6px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.35); }
+  .node .chassis::before, .node .chassis::after { content: ""; position: absolute; top: 18%; bottom: 18%;
+    width: 4px; background: var(--fam, var(--fam-top)); opacity: .85; border-radius: 2px; }
+  .node .chassis::before { left: -3px; } .node .chassis::after { right: -3px; }
+  .node .fam-tag { position: absolute; top: 4px; left: 7px; font-family: var(--mono); font-size: 8.5px;
+    color: var(--fam, var(--fam-top)); letter-spacing: .08em; }
+  .node .viewer { font-family: var(--mono); font-size: 12px; color: #cfcfd6; }
+  .node .opname { font-family: var(--mono); font-size: 11.5px; color: #b9b9c2; }
+  .node .krname { font-size: 11px; color: #77777f; }
+  .node.chop { --fam: var(--fam-chop); } .node.top { --fam: var(--fam-top); } .node.dat { --fam: #d46a9f; }
+  .wire { width: 42px; height: 2px; background: var(--wire); position: relative; margin: 0 3px;
+    transform: translateY(-14px); flex: 0 0 auto; }
+  .wire::after { content: ""; position: absolute; right: -1px; top: 50%; transform: translateY(-50%);
+    border-left: 7px solid var(--wire); border-top: 4.5px solid transparent; border-bottom: 4.5px solid transparent; }
+  .annot { font-family: var(--mono); color: var(--accent); font-size: 13px; line-height: 1.7; margin-top: 18px; }
+  .bstep { display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding: 20px 0; border-bottom: 1px solid var(--faint); }
+  .bstep .sn { font-family: var(--mono); font-size: 19px; font-weight: 700; color: var(--accent); padding-top: 2px; }
+  .bstep h3 { font-size: 17.5px; font-weight: 800; margin-bottom: 6px; }
+  .bstep h3 .chip { margin-right: 6px; vertical-align: 2px; }
+  .bstep p { font-size: 15px; margin-bottom: 8px; }
+  .bstep table { margin: 10px 0 4px; }
+  .why { background: #fdf3e7; border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0;
+    padding: 10px 14px; font-size: 14px; margin: 10px 0 4px; }
+  .why b { color: var(--accent); }
+  ul.plain { margin: 6px 0 12px 2px; list-style: none; }
+  ul.plain li { font-size: 15px; padding-left: 1.4em; position: relative; margin-bottom: 7px; }
+  ul.plain li::before { content: ""; position: absolute; left: 0; top: .5em; width: .5em; height: .5em;
+    border-radius: 2px; background: var(--accent); }
+  .pagenav { display: flex; justify-content: space-between; margin-top: 60px; padding-top: 20px;
+    border-top: 2px solid var(--ink); font-family: var(--mono); font-size: 14px; }
+  .pagenav a { color: var(--ink); text-decoration: none; font-weight: 700; }
+  .pagenav a:hover { color: var(--accent); }
+  .pagenav .sub { display: block; font-size: 12px; color: var(--gray); font-weight: 400; margin-top: 3px; }
+  @media (max-width: 640px) { .bstep { grid-template-columns: 32px 1fr; } }
+</style></template>
+
+<template id="tpl-g01"><div class="crumb">수퍼 테스트베드 LAB — 3주차 아두이노 시리얼 · <b>공통 빌드</b> · Serial DAT → … → Null</div>
+<h1>공통 빌드 — 시리얼을 CHOP으로</h1>
+<p class="lead">센서가 <strong>무엇이든</strong> 이 체인은 똑같습니다. 앞의 Serial DAT만 소스가 바뀌고, 뒷부분은 지난주 그대로. 이 가이드 하나면 가변저항이든 초음파든 다 붙습니다.</p>
+<div class="meta"><span>파일: 직접 빌드 (현장 공유)</span><span>DAT · CHOP</span><span>2주차 정규화 체인 재사용</span></div>
+
+<h2><span class="no">◆</span>완성 네트워크</h2>
+<div class="td-panel"><div class="net-row">
+  <div class="node dat"><div class="chassis"><span class="fam-tag">DAT</span><span class="viewer">512,738</span></div><span class="opname">serial1</span><span class="krname">포트 열기</span></div>
+  <div class="wire"></div>
+  <div class="node dat"><div class="chassis"><span class="fam-tag">DAT</span><span class="viewer">512│738</span></div><span class="opname">convert1</span><span class="krname">쉼표 쪼갬</span></div>
+  <div class="wire"></div>
+  <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">▁▂▅</span></div><span class="opname">datto1</span><span class="krname">열=채널</span></div>
+  <div class="wire"></div>
+  <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">dist</span></div><span class="opname">rename1</span><span class="krname">이름</span></div>
+  <div class="wire"></div>
+  <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">0~1</span></div><span class="opname">math1</span><span class="krname">리매핑</span></div>
+  <div class="wire"></div>
+  <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">～</span></div><span class="opname">lag1</span><span class="krname">부드럽게</span></div>
+  <div class="wire"></div>
+  <div class="node chop"><div class="chassis"><span class="fam-tag">CHOP</span><span class="viewer">●</span></div><span class="opname">null_sensor</span><span class="krname">종착역</span></div>
+</div></div>
+<p class="annot">op('null_sensor')['dist'] &nbsp;←&nbsp; 파라미터는 이 Null만 참조. "계산은 찹으로, 익스프레션은 참조만"</p>
+
+<h2><span class="no">A</span>단계별 빌드</h2>
+<div class="bstep"><div class="sn">1</div><div>
+  <h3><span class="chip dat">DAT</span>Serial DAT — 포트 열기</h3>
+  <p>바깥 숫자가 들어오는 입구. <b>먼저 아두이노 IDE 시리얼 모니터를 닫으세요</b> — 한 포트는 한 명만 씁니다.</p>
+  <table><tr><th>파라미터</th><th>값</th></tr>
+  <tr><td class="k">Active</td><td>On</td></tr>
+  <tr><td class="k">Port</td><td>/dev/cu.usbmodem… (맥) · COMx (윈)</td></tr>
+  <tr><td class="k">Baud Rate</td><td>9600 (스케치와 일치)</td></tr>
+  <tr><td class="k">Maximum Lines</td><td>1 &nbsp;— 항상 최신 한 줄만 (안 그럼 값이 쌓임)</td></tr></table>
+  <div class="why"><b>왜:</b> Serial DAT는 들어온 텍스트를 표로 저장합니다. 한 줄에 <code>512,738</code>이면 대부분 <b>한 칸에 통째로</b> 담겨요 — 그래서 쪼개는 노드가 다음에 필요합니다.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">2</div><div>
+  <h3><span class="chip dat">DAT</span>Convert DAT — 쉼표 쪼개기</h3>
+  <p>값이 여러 개(CSV)일 때만. 값이 하나면 이 노드는 건너뛰어도 됩니다.</p>
+  <table><tr><th>파라미터</th><th>값</th></tr>
+  <tr><td class="k">Split Cells at</td><td>, &nbsp;(쉼표)</td></tr>
+  <tr><td class="k">Split Cells into Rows</td><td>Off &nbsp;(열로 쪼갬)</td></tr></table>
+  <div class="why"><b>결과:</b> <code>512,738</code> → <code>[512][738]</code> 두 칸짜리 표. 이제 열이 2개 = 채널이 2개.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">3</div><div>
+  <h3><span class="chip chop">CHOP</span>DAT to CHOP — 열을 채널로</h3>
+  <p>표의 <b>열 하나 = 채널 하나</b>로 자동 변환. 쉼표 개수만큼 채널이 생깁니다.</p>
+  <table><tr><th>파라미터</th><th>값</th></tr>
+  <tr><td class="k">DAT</td><td>convert1 (또는 serial1)</td></tr>
+  <tr><td class="k">First Row is</td><td>Values &nbsp;(헤더 없음)</td></tr></table>
+  <div class="why"><b>확인:</b> chan1, chan2… 가 손 따라 움직이면 성공. 한 채널에 "512,738"이 통째로 잡히면 → 2번 Convert DAT를 안 거친 것.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">4</div><div>
+  <h3><span class="chip chop">CHOP</span>Rename — 이름 붙이기</h3>
+  <p>여기가 2주차 컨벤션의 핵심. 채널에 <b>의미</b>를 줍니다. 아두이노는 순서만, 이름은 TD가.</p>
+  <table><tr><th>From</th><th>To</th></tr>
+  <tr><td class="k">chan1</td><td class="k">dist &nbsp;(또는 pot, tilt…)</td></tr></table>
+  <div class="why"><b>왜:</b> 익스프레션이 <code>op('null_sensor')['dist']</code>처럼 <b>읽히게</b> 됩니다. chan1보다 dist가 한눈에 들어와요.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">5</div><div>
+  <h3><span class="chip chop">CHOP</span>Math — 0~1로 리매핑</h3>
+  <p>센서 원값(예: 0~1023)을 공용어 0~1로. 매핑의 "번역" 단계.</p>
+  <table><tr><th>파라미터</th><th>값</th></tr>
+  <tr><td class="k">Range · From Range</td><td>0 &nbsp; 1023</td></tr>
+  <tr><td class="k">Range · To Range</td><td>0 &nbsp; 1</td></tr></table>
+  <div class="why"><b>황금률:</b> 스케일링은 Math(리매핑)에서. 파라미터엔 <code>op('null_sensor')['dist']</code> 참조만 — 익스프레션에 계산식을 넣지 않습니다.</div>
+</div></div>
+
+<div class="bstep"><div class="sn">6</div><div>
+  <h3><span class="chip chop">CHOP</span>Lag — 부드럽게</h3>
+  <p>손터치·센서는 값이 좀 튑니다. <code>Lag 0.1</code>이면 잔떨림이 정리돼요. 너무 크면 굼떠짐.</p>
+</div></div>
+
+<div class="bstep"><div class="sn">7</div><div>
+  <h3><span class="chip chop">CHOP</span>Null — 종착역</h3>
+  <p>이름 <code>null_sensor</code>. 모든 파라미터는 <b>이 Null만</b> 참조합니다. 중간 노드를 바꿔도 참조가 안 깨져요.</p>
+</div></div>
+
+<h2><span class="no">B</span>매핑 — 어디에 꽂나</h2>
+<p>준비된 <code>op('null_sensor')['dist']</code>를 아무 파라미터에:</p>
+<ul class="plain">
+<li><strong>Circle TOP</strong> Radius / <strong>Level TOP</strong> Brightness — 값 → 크기·밝기</li>
+<li><strong>Transform TOP</strong> Translate — 값 → 위치 (2주차 손 커서와 동일)</li>
+<li><strong>Audio Oscillator CHOP</strong> Frequency — 값 → 음높이 (테레민)</li>
+</ul>
+
+<h2><span class="no">C</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>Serial DAT에 아무것도 안 떠요</strong> — ① IDE 시리얼 모니터가 열려 있음(닫기) ② Active가 Off ③ Baud 불일치.</li>
+<li><strong>한 채널에 "512,738" 통째로</strong> — Convert DAT(2번)를 안 거침. Serial DAT → Convert DAT → DAT to CHOP 순서 확인.</li>
+<li><strong>값이 계속 쌓여서 이상해요</strong> — Serial DAT의 Maximum Lines를 1로.</li>
+<li><strong>포트 이름을 모르겠어요</strong> — 맥 터미널 <code>ls /dev/cu.*</code>, 윈 장치관리자 &gt; 포트(COM).</li>
+</ul>
+
+<div class="pagenav"><a class="glink" href="#g03">← 초음파<span class="sub">HC-SR04 거리</span></a><a class="glink" href="#g02">가변저항 →<span class="sub">첫 센서</span></a></div>
+</template>
+
+<template id="tpl-g02"><div class="crumb">수퍼 테스트베드 LAB — 3주차 아두이노 시리얼 · <b>가변저항</b> · 첫 센서, 값 1개</div>
+<h1>가변저항 — 첫 센서</h1>
+<p class="lead">노브를 돌리면 값이 <strong>0~1023</strong>으로. 라이브러리 0, 회로 최소. 시리얼 첫 실습에 가장 안전한 센서입니다. 공통 빌드의 소스 자리에 그대로 꽂혀요.</p>
+<div class="meta"><span>analogRead</span><span>채널 1개</span><span>키트 자료 1강 · 5p~</span></div>
+
+<h2><span class="no">◆</span>배선</h2>
+<p><strong>센서 확장 쉴드 V5.0</strong>을 우노에 얹으면 가변저항 모듈을 아날로그 <b>A0</b> 3핀(S·V·G)에 바로 꽂습니다. 브레드보드 배선 없음.</p>
+<div class="pins">
+  가변저항 <span class="pin">S</span>(신호) → <span class="pin">A0</span><br>
+  가변저항 <span class="pin">V</span>(전원) → 5V &nbsp;·&nbsp; <span class="pin">G</span>(접지) → GND<br>
+  <span class="muted">※ 쉴드 없이 브레드보드: 양끝 → 5V·GND, 가운데 → A0</span>
+</div>
+
+<h2><span class="no">A</span>스케치 (복붙 → 업로드)</h2>
+<pre><span class="c">// 가변저항 → A0. 값 하나를 시리얼로.</span>
+void setup() {
+  Serial.begin(<span class="o">9600</span>);
+}
+void loop() {
+  Serial.println(analogRead(A0));   <span class="c">// 0~1023</span>
+  delay(<span class="o">20</span>);                       <span class="c">// 약 50fps</span>
+}</pre>
+<div class="why"><b>확인:</b> 업로드 후 IDE 시리얼 모니터(9600)에 노브 돌리면 숫자가 0~1023으로 변함 → <b>모니터 닫고</b> TD로.</div>
+
+<h2><span class="no">B</span>TD — 공통 빌드 그대로</h2>
+<p>값이 하나라 Convert DAT는 생략 가능:</p>
+<p><code>Serial DAT</code> → <code>DAT to CHOP</code> → <code>Rename(chan1→pot)</code> → <code>Math(0~1023 → 0~1)</code> → <code>Lag 0.1</code> → <code>null_sensor</code></p>
+<ul class="plain">
+<li>매핑: <code>op('null_sensor')['pot']</code> → Circle Radius / Transform tx / Hue</li>
+<li>자세한 노드 설정은 <a class="glink" href="#g01">공통 빌드 가이드</a> 참고</li>
+</ul>
+
+<h2><span class="no">C</span>더 가보기</h2>
+<ul class="plain">
+<li><strong>센서 2개 동시</strong> — A1에 또 하나 꽂고 CSV로: <code>Serial.print(analogRead(A0)); Serial.print(","); Serial.println(analogRead(A1));</code> → Convert DAT로 채널 2개</li>
+<li><strong>값이 거꾸로</strong> — Math의 To Range를 <code>1 0</code>으로 뒤집기</li>
+</ul>
+
+<div class="pagenav"><a class="glink" href="#g01">← 공통 빌드<span class="sub">Serial DAT → Null</span></a><a class="glink" href="#g03">초음파 →<span class="sub">거리 = 손 거리</span></a></div>
+</template>
+
+<template id="tpl-g03"><div class="crumb">수퍼 테스트베드 LAB — 3주차 아두이노 시리얼 · <b>초음파</b> · HC-SR04 거리</div>
+<h1>초음파 HC-SR04 — 거리</h1>
+<p class="lead">소리를 쏘고 되돌아오는 시간으로 <strong>거리(cm)</strong>를 잽니다. 2주차 "손 거리" 인터랙션을 <strong>물리 소스</strong>로 재현하는 센서 — 손을 가까이/멀리 하면 값이 변해요.</p>
+<div class="meta"><span>pulseIn (라이브러리 0)</span><span>채널 1개</span><span>키트 자료 3강 · 82p~</span></div>
+
+<h2><span class="no">◆</span>배선</h2>
+<p>센서 확장 쉴드 V5.0의 <strong>초음파 인터페이스</strong>(VCC · A0 · A1 · GND)에 HC-SR04 4핀을 꽂습니다.</p>
+<div class="pins">
+  <span class="pin">Trig</span>(쏘기) → A0 &nbsp;·&nbsp; <span class="pin">Echo</span>(받기) → A1<br>
+  <span class="pin">VCC</span> → 5V &nbsp;·&nbsp; <span class="pin">GND</span> → GND<br>
+  <span class="muted">※ 아날로그 핀 A0·A1을 디지털처럼 사용 (digitalWrite/pulseIn 가능)</span>
+</div>
+
+<h2><span class="no">A</span>스케치 (복붙 → 업로드)</h2>
+<pre><span class="c">// HC-SR04 초음파 → 거리(cm)를 시리얼로.</span>
+const int TRIG = A0, ECHO = A1;
+void setup() {
+  Serial.begin(<span class="o">9600</span>);
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+}
+void loop() {
+  digitalWrite(TRIG, LOW);  delayMicroseconds(<span class="o">2</span>);
+  digitalWrite(TRIG, HIGH); delayMicroseconds(<span class="o">10</span>);  <span class="c">// 10us 펄스 쏘기</span>
+  digitalWrite(TRIG, LOW);
+  long us = pulseIn(ECHO, HIGH, <span class="o">30000</span>);   <span class="c">// 되돌아온 시간(타임아웃 30ms)</span>
+  float cm = us * <span class="o">0.0343</span> / <span class="o">2.0</span>;         <span class="c">// 소리 속도로 거리 환산</span>
+  Serial.println(cm);
+  delay(<span class="o">20</span>);
+}</pre>
+<div class="why"><b>왜 ÷2:</b> 소리가 물체까지 <b>갔다가 돌아온</b> 왕복 시간이라 절반이 실제 거리. 0.0343 = 소리 속도(cm/µs).</div>
+
+<h2><span class="no">B</span>TD — 거리 범위만 조정</h2>
+<p>공통 빌드 그대로, Math의 From Range만 거리에 맞게:</p>
+<table><tr><th>파라미터</th><th>값</th></tr>
+<tr><td class="k">Rename</td><td>chan1 → dist</td></tr>
+<tr><td class="k">Math · From Range</td><td>2 &nbsp; 40 &nbsp;<span class="muted">(가까이 2cm ~ 멀리 40cm)</span></td></tr>
+<tr><td class="k">Math · To Range</td><td>1 &nbsp; 0 &nbsp;<span class="muted">(가까울수록 1 = 크게)</span></td></tr>
+<tr><td class="k">Lag</td><td>0.15 <span class="muted">(초음파는 튀는 편)</span></td></tr></table>
+<div class="why"><b>2주차 연결:</b> <code>op('null_sensor')['dist']</code> → 원 크기/밝기. 손을 가까이 하면 커지는 그 인터랙션, 이번엔 웹캠 없이 초음파로.</div>
+
+<h2><span class="no">C</span>안 될 때</h2>
+<ul class="plain">
+<li><strong>값이 0만 나와요</strong> — Trig/Echo 핀 반대로 꽂힘. A0=Trig, A1=Echo 확인.</li>
+<li><strong>값이 미친 듯이 튀어요</strong> — 정상. 초음파는 각도·재질에 민감. Lag 0.15~0.2, Math에 Limit(clamp) 추가.</li>
+<li><strong>먼 거리에서 0</strong> — 타임아웃(30000µs ≈ 5m) 밖. 실내 손동작은 2~40cm면 충분.</li>
+</ul>
+
+<div class="pagenav"><a class="glink" href="#g02">← 가변저항<span class="sub">첫 센서</span></a><a class="glink" href="#g01">공통 빌드 →<span class="sub">Serial DAT → Null</span></a></div>
+</template>
+
+<script>
+(function(){
+  const overlay = document.getElementById('goverlay');
+  const gbody = overlay.querySelector('.gbody');
+  const host = document.getElementById('ghost');
+  const shadow = host.attachShadow({mode: 'open'});
+  const gbtns = [...overlay.querySelectorAll('.gbar button[data-g]')];
+  function render(key){
+    const tpl = document.getElementById('tpl-' + key);
+    if (!tpl) return;
+    shadow.innerHTML = '';
+    shadow.appendChild(document.getElementById('tpl-gcss').content.cloneNode(true));
+    const wrap = document.createElement('div');
+    wrap.className = 'wrap';
+    wrap.appendChild(tpl.content.cloneNode(true));
+    shadow.appendChild(wrap);
+    gbtns.forEach(b => b.classList.toggle('on', b.dataset.g === key));
+    gbody.scrollTop = 0;
+    shadow.querySelectorAll('a.glink').forEach(a => {
+      const href = a.getAttribute('href') || '';
+      if (/^#g0[1-3]$/.test(href)) a.addEventListener('click', e => { e.preventDefault(); openGuide(href.slice(1)); });
+    });
+  }
+  window.openGuide = function(key){
+    overlay.hidden = false; render(key);
+    history.replaceState(null, '', '#' + key);
+  };
+  function closeGuide(){ overlay.hidden = true; history.replaceState(null, '', ' '); }
+  document.getElementById('gclose').addEventListener('click', closeGuide);
+  gbtns.forEach(b => b.addEventListener('click', () => openGuide(b.dataset.g)));
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a.glink');
+    if (a) { e.preventDefault(); openGuide(a.getAttribute('href').slice(1)); }
+  });
+  document.addEventListener('keydown', e => {
+    if (!overlay.hidden && e.key === 'Escape') { e.preventDefault(); closeGuide(); }
+  }, true);
+  const h = window.__initHash || location.hash.slice(1);
+  if (/^g0[1-3]$/.test(h)) openGuide(h);
+  window.addEventListener('hashchange', () => {
+    const n = location.hash.slice(1);
+    if (/^g0[1-3]$/.test(n)) openGuide(n);
+  });
+})();
+</script>
+</body>
+</html>
