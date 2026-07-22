@@ -469,8 +469,8 @@
     <div class="body">
       <p class="big center">웹캠 대신 <span class="accent">센서</span>.<br>나머지는 지난주 그대로.</p>
       <ul class="clean" style="margin-top:5vh;">
-        <li><strong>아두이노 = 숫자 뱉는 상자</strong> — 깊게 안 배웁니다. 스케치(코드)는 복붙으로 드려요</li>
-        <li><strong>우리가 배우는 건 "통로"</strong> — 그 숫자가 어떻게 TD로 흘러들어오나 = <span class="accent">시리얼</span></li>
+        <li><strong>아두이노 = 숫자 뱉는 상자</strong> — 깊게 다루지 않습니다. 스케치(코드)는 복사·붙여넣기로 제공합니다</li>
+        <li><strong>우리가 배우는 것은 "통로"</strong> — 그 숫자가 TD로 들어오는 경로 = <span class="accent">시리얼</span></li>
         <li><strong>센서가 뭐든 TD는 똑같다</strong> — 소스만 바뀌는 그 그림, 오늘로 세 번째</li>
       </ul>
     </div>
@@ -528,8 +528,8 @@
     <div class="body">
       <ul class="clean">
         <li><strong>아두이노를 깊게 배우지 않습니다</strong> — 오늘 아두이노의 역할은 딱 하나, <strong>센서 값을 숫자로 뱉는 것</strong></li>
-        <li><strong>스케치(코드)는 복붙으로</strong> — 전문가가 될 필요 없어요. 센서마다 완성 코드를 드립니다</li>
-        <li><strong>진짜 배우는 건 그 다음</strong> — 그 숫자가 어떻게 TouchDesigner로 흘러들어오나 = <span class="accent">시리얼 통신</span></li>
+        <li><strong>스케치(코드)는 복사·붙여넣기로</strong> — 전문가가 될 필요는 없습니다. 센서마다 완성 코드를 제공합니다</li>
+        <li><strong>실제로 배우는 것은 그 다음</strong> — 그 숫자가 TouchDesigner로 들어오는 경로 = <span class="accent">시리얼 통신</span></li>
         <li><strong>2주차와 같은 자리</strong> — MediaPipe도 "웹캠 → 숫자"였죠. 아두이노는 "센서 → 숫자". <span class="accent">소스만 바뀜</span></li>
       </ul>
       <div class="td-panel" style="margin-top:3.5vh; padding:3vh 3vw;">
@@ -550,7 +550,7 @@
         <div class="lvl"><span class="ma">10 mA</span><span class="bar"><i style="width:35%; background:#e0a94e;"></i></span><span class="cap">근육이 말 안 들음</span></div>
         <div class="lvl danger"><span class="ma">100 mA</span><span class="bar"><i style="width:100%; background:#d9484e;"></i></span><span class="cap">심장 위험</span></div>
       </div>
-      <p class="center" style="margin-top:3.5vh;">조심할 건 사람이 아니라 <strong>보드</strong> — <code>5V ●━━● GND</code> 직접 쇼트만 피하기.<br><span class="muted">사람은 5V로 절대 안 다칩니다. 안심하고 만지세요.</span></p>
+      <p class="center" style="margin-top:3.5vh;">조심할 건 사람이 아니라 <strong>보드</strong> — <code>5V ●━━● GND</code> 직접 쇼트만 피하기.<br><span class="muted">사람은 5V로 다치지 않습니다. 안심하고 만져도 됩니다.</span></p>
     </div>
     <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
   </section>
@@ -559,7 +559,7 @@
   <section class="slide">
     <div class="slide-label">💾 드라이버 <span class="sub">— 짭퉁 우노 SMD R3 = CH340 칩</span></div>
     <div class="body">
-      <p style="margin-bottom:2.5vh;">정품 우노는 드라이버가 필요 없지만, <strong>호환보드(SMD R3)는 CH340 칩</strong>이라 드라이버가 필요할 수 있어요. <strong class="accent">포트 이름</strong>으로 3초 만에 판별됩니다.</p>
+      <p style="margin-bottom:2.5vh;">정품 우노는 드라이버가 필요 없지만, <strong>호환보드(SMD R3)는 CH340 칩</strong>이라 드라이버가 필요할 수 있습니다. <strong class="accent">포트 이름</strong>으로 판별합니다.</p>
       <table>
         <tr><th>맥에서 <code>ls /dev/cu.*</code></th><th>의미</th></tr>
         <tr><td class="k">cu.usbmodem…</td><td>✓ 네이티브 — 드라이버 불필요</td></tr>
@@ -587,7 +587,7 @@
       <ul class="clean" style="margin-top:3.5vh;">
         <li><strong>한 줄 = 한 순간</strong> — 아두이노가 <code>Serial.println(값)</code> 할 때마다 한 줄이 흘러나옴</li>
         <li><strong>Baud rate(전송 속도)를 맞춰야</strong> — 아두이노와 TD가 같은 숫자(보통 <code>9600</code>)여야 안 깨짐</li>
-        <li><strong class="accent">한 포트 = 한 명 독점</strong> — IDE 시리얼 모니터가 열려 있으면 TD가 포트를 못 엽니다. <strong>모니터 닫고 TD 열기</strong></li>
+        <li><strong class="accent">한 포트 = 한 명 독점</strong> — IDE 시리얼 모니터가 열려 있으면 TD가 포트를 열지 못합니다. <strong>모니터를 닫은 뒤 TD 열기</strong></li>
       </ul>
     </div>
     <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
@@ -604,7 +604,7 @@
           <div class="kb"><span class="p">1강 · 5p~</span><span>센서 확장 쉴드 + <strong>가변저항</strong> 실습</span></div>
           <div class="kb"><span class="p">3강 · 82p~</span><span><strong>초음파 HC-SR04</strong> 실습</span></div>
         </div>
-        <p class="muted">키트 구매 시 구글드라이브로 제공된 자료입니다 — 각자 열어주세요.<br><a href="https://eduino.kr/product/detail.html?product_no=141" target="_blank" rel="noopener">eduino.kr — 스타터 키트 입문편</a></p>
+        <p class="muted">키트 구매 시 구글드라이브로 제공된 자료입니다 — 수업 중 각자 확인합니다.<br><a href="https://eduino.kr/product/detail.html?product_no=141" target="_blank" rel="noopener">eduino.kr — 스타터 키트 입문편</a></p>
       </div>
     </div>
     <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
@@ -616,7 +616,7 @@
     <div class="body">
       <p class="big center">시리얼 모니터에 숫자가<br>손 따라 움직인다면 — <span class="accent">통신 성공 ✓</span></p>
       <ul class="clean" style="margin-top:5vh;">
-        <li><strong>★ 시리얼 모니터를 닫으세요</strong> — 한 포트는 한 명만. 모니터가 잡고 있으면 TD가 못 읽어요</li>
+        <li><strong>★ 시리얼 모니터를 닫습니다</strong> — 한 포트는 한 명만. 모니터가 점유하고 있으면 TD가 읽지 못합니다</li>
         <li><strong>TouchDesigner에서 Serial DAT 열기</strong> — 같은 포트, 같은 Baud(9600)</li>
         <li><strong>다음은 지난주와 똑같은 체인</strong> — 숫자 → 정규화 → 매핑</li>
       </ul>
@@ -669,22 +669,22 @@
         <tr><td><strong>초음파 HC-SR04</strong></td><td class="k">pulseIn</td><td class="k">37</td><td><span class="chip chop">1</span></td><td class="today">거리 = 손 거리 (2주차!)</td></tr>
         <tr><td><strong>MPU-6050</strong> <span class="muted">확장</span></td><td class="k">Wire (I2C)</td><td class="k">0.1,-0.98,…</td><td><span class="chip chop">6</span></td><td>기울기 = 회전</td></tr>
       </table>
-      <p class="center" style="margin-top:2.5vh;"><strong>채널 개수만 다릅니다.</strong> <span class="muted">DAT to CHOP가 알아서 맞춰줘요 — "몇 개 나오나 세봐" 가 곧 교재.</span></p>
+      <p class="center" style="margin-top:2.5vh;"><strong>채널 개수만 다릅니다.</strong> <span class="muted">DAT to CHOP가 자동으로 맞춥니다 — "몇 개 나오는지 세어 보는 것"이 곧 교재.</span></p>
     </div>
     <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
   </section>
 
   <!-- 14. 크로스토크 -->
   <section class="slide">
-    <div class="slide-label">🤔 Q <span class="sub">— 왜 안 꽂은 핀도 값이 움직여요?</span></div>
+    <div class="slide-label">🤔 Q <span class="sub">— 왜 안 꽂은 핀도 값이 움직이는가</span></div>
     <div class="body">
-      <p style="margin-bottom:3vh;">손터치 테스트에서 A0·A1이 비슷하게 출렁이는 건 <strong>버그가 아니라 원리</strong>예요. 두 가지가 겹칩니다:</p>
+      <p style="margin-bottom:3vh;">손터치 테스트에서 A0·A1이 비슷하게 출렁이는 것은 <strong>버그가 아니라 원리</strong>입니다. 두 가지가 겹칩니다:</p>
       <ul class="clean">
-        <li><strong>① 네 몸 = 안테나 하나</strong> — 두 핀 다 "너"라는 같은 도체에 붙어 같은 60Hz 노이즈를 주움 → 같이 움직임</li>
+        <li><strong>① 몸 전체가 하나의 안테나</strong> — 두 핀 모두 같은 도체(몸)에 붙어 같은 60Hz 노이즈를 주움 → 같이 움직임</li>
         <li><strong>② ADC 멀티플렉서 크로스토크</strong> — 아날로그 핀들이 ADC 하나를 돌려쓰기. 앞 핀 전하가 다음 핀에 "묻어남"</li>
-        <li><strong class="accent">진짜 센서를 꽂으면 사라짐</strong> — 센서는 핀을 확실한 전압에 딱 물려줘요(낮은 임피던스). floating이 아니니 전염 끝</li>
+        <li><strong class="accent">실제 센서를 꽂으면 사라짐</strong> — 센서는 핀을 확실한 전압에 물려줍니다(낮은 임피던스). floating이 아니므로 전염 없음</li>
       </ul>
-      <p class="center muted" style="margin-top:3vh;">손터치 = 통신 확인용. 채널을 진짜로 분리하려면 → 가변저항 꽂는 순간 해결.</p>
+      <p class="center muted" style="margin-top:3vh;">손터치 = 통신 확인용. 채널을 완전히 분리하려면 → 가변저항을 꽂는 순간 해결.</p>
     </div>
     <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
   </section>
@@ -699,7 +699,7 @@
         <tr><td><strong>LED 켜기</strong></td><td><span class="chip top">씀</span></td><td>없으면 LED가 탐 — 220~330Ω 하나 (확장 미션 때)</td></tr>
         <tr><td><strong>생버튼</strong></td><td><span class="chip dim">코드로</span></td><td><code>INPUT_PULLUP</code> = 내부 저항, 외부 불필요</td></tr>
       </table>
-      <p class="center" style="margin-top:3vh;"><strong>센서 확장 쉴드 V5.0</strong>을 우노에 얹으면 센서를 <strong class="accent">3핀(S·V·G)</strong>으로 바로 꽂아요.<br><span class="muted">브레드보드 배선도, 저항도 거의 안 건드림 → 회로 실수 리스크 ↓</span></p>
+      <p class="center" style="margin-top:3vh;"><strong>센서 확장 쉴드 V5.0</strong>을 우노에 얹으면 센서를 <strong class="accent">3핀(S·V·G)</strong>으로 바로 꽂습니다.<br><span class="muted">브레드보드 배선도, 저항도 거의 건드리지 않음 → 회로 실수 리스크 ↓</span></p>
     </div>
     <div class="footer"><span>수퍼 테스트베드 LAB</span><span>0 / 0</span></div>
   </section>
@@ -723,9 +723,9 @@
     <div class="slide-label">Project <span class="sub">— 프로젝트 소개 · 브레인스토밍 · 멘토링 ①</span></div>
     <div class="body">
       <ul class="clean">
-        <li><strong>오늘부터 프로젝트가 시작됩니다</strong> — 4주차 제작, 5주차 중간과정 발표로 이어져요</li>
+        <li><strong>오늘부터 프로젝트가 시작됩니다</strong> — 4주차 제작, 5주차 중간과정 발표로 이어집니다</li>
         <li><strong>한 문장만</strong> — "내 센서/몸으로 <span class="accent">무엇을</span> 움직이고 싶은가"</li>
-        <li><strong>멘토와 1:1 방향 잡기</strong> — 아이디어를 입력→정규화→매핑 그림에 얹어보기</li>
+        <li><strong>멘토와 1:1 방향 잡기</strong> — 아이디어를 입력→정규화→매핑 그림에 대입</li>
         <li><strong>버디 페어</strong> — 서로 다른 센서끼리 짝. "네 값이랑 내 값이 어떻게 다르게 생겼나"</li>
       </ul>
       <p class="center big" style="margin-top:5vh;">뭘 흔들고 싶은지, 한 문장.</p>
@@ -738,7 +738,7 @@
     <div class="slide-label">Wrap-up</div>
     <div class="body">
       <ul class="clean">
-        <li><strong>집에서 계속</strong> — 키트는 1인 1개. 스케치 복붙으로 혼자 센서 갈아끼우며 놀 수 있어요</li>
+        <li><strong>집에서 계속</strong> — 키트는 1인 1개. 스케치 복사·붙여넣기로 혼자 센서를 바꿔가며 실습할 수 있습니다</li>
         <li><strong>깃헙 자료</strong> — <code>github.com/gamsasyo/STB_InteractiveMapping</code> · 슬라이드 + <strong>공통 빌드 · 가변저항 · 초음파 가이드</strong>. 키트 강의자료는 에듀이노 제공(각자 보유)</li>
         <li><strong class="accent">프로젝트 씨앗</strong> — "뭘 흔들고 싶은지" 한 문장 품고 다음 주에</li>
       </ul>
@@ -965,13 +965,13 @@
 <h2><span class="no">A</span>단계별 빌드</h2>
 <div class="bstep"><div class="sn">1</div><div>
   <h3><span class="chip dat">DAT</span>Serial DAT — 포트 열기</h3>
-  <p>바깥 숫자가 들어오는 입구. <b>먼저 아두이노 IDE 시리얼 모니터를 닫으세요</b> — 한 포트는 한 명만 씁니다.</p>
+  <p>바깥 숫자가 들어오는 입구. <b>먼저 아두이노 IDE 시리얼 모니터를 닫습니다</b> — 한 포트는 한 명만 씁니다.</p>
   <table><tr><th>파라미터</th><th>값</th></tr>
   <tr><td class="k">Active</td><td>On</td></tr>
   <tr><td class="k">Port</td><td>/dev/cu.usbmodem… (맥) · COMx (윈)</td></tr>
   <tr><td class="k">Baud Rate</td><td>9600 (스케치와 일치)</td></tr>
   <tr><td class="k">Maximum Lines</td><td>1 &nbsp;— 항상 최신 한 줄만 (안 그럼 값이 쌓임)</td></tr></table>
-  <div class="why"><b>왜:</b> Serial DAT는 들어온 텍스트를 표로 저장합니다. 한 줄에 <code>512,738</code>이면 대부분 <b>한 칸에 통째로</b> 담겨요 — 그래서 쪼개는 노드가 다음에 필요합니다.</div>
+  <div class="why"><b>왜:</b> Serial DAT는 들어온 텍스트를 표로 저장합니다. 한 줄에 <code>512,738</code>이면 대부분 <b>한 칸에 통째로</b> 담깁니다 — 그래서 쪼개는 노드가 다음에 필요합니다.</div>
 </div></div>
 
 <div class="bstep"><div class="sn">2</div><div>
@@ -997,7 +997,7 @@
   <p>여기가 2주차 컨벤션의 핵심. 채널에 <b>의미</b>를 줍니다. 아두이노는 순서만, 이름은 TD가.</p>
   <table><tr><th>From</th><th>To</th></tr>
   <tr><td class="k">chan1</td><td class="k">dist &nbsp;(또는 pot, tilt…)</td></tr></table>
-  <div class="why"><b>왜:</b> 익스프레션이 <code>op('null_sensor')['dist']</code>처럼 <b>읽히게</b> 됩니다. chan1보다 dist가 한눈에 들어와요.</div>
+  <div class="why"><b>왜:</b> 익스프레션이 <code>op('null_sensor')['dist']</code>처럼 <b>읽히게</b> 됩니다. chan1보다 dist가 한눈에 들어옵니다.</div>
 </div></div>
 
 <div class="bstep"><div class="sn">5</div><div>
@@ -1011,12 +1011,12 @@
 
 <div class="bstep"><div class="sn">6</div><div>
   <h3><span class="chip chop">CHOP</span>Lag — 부드럽게</h3>
-  <p>손터치·센서는 값이 좀 튑니다. <code>Lag 0.1</code>이면 잔떨림이 정리돼요. 너무 크면 굼떠짐.</p>
+  <p>손터치·센서는 값이 다소 튑니다. <code>Lag 0.1</code>이면 잔떨림이 정리됩니다. 너무 크면 반응이 느려집니다.</p>
 </div></div>
 
 <div class="bstep"><div class="sn">7</div><div>
   <h3><span class="chip chop">CHOP</span>Null — 종착역</h3>
-  <p>이름 <code>null_sensor</code>. 모든 파라미터는 <b>이 Null만</b> 참조합니다. 중간 노드를 바꿔도 참조가 안 깨져요.</p>
+  <p>이름 <code>null_sensor</code>. 모든 파라미터는 <b>이 Null만</b> 참조합니다. 중간 노드를 바꿔도 참조가 깨지지 않습니다.</p>
 </div></div>
 
 <h2><span class="no">B</span>매핑 — 어디에 꽂나</h2>
@@ -1040,7 +1040,7 @@
 
 <template id="tpl-g02"><div class="crumb">수퍼 테스트베드 LAB — 3주차 아두이노 시리얼 · <b>가변저항</b> · 첫 센서, 값 1개</div>
 <h1>가변저항 — 첫 센서</h1>
-<p class="lead">노브를 돌리면 값이 <strong>0~1023</strong>으로. 라이브러리 0, 회로 최소. 시리얼 첫 실습에 가장 안전한 센서입니다. 공통 빌드의 소스 자리에 그대로 꽂혀요.</p>
+<p class="lead">노브를 돌리면 값이 <strong>0~1023</strong>으로. 라이브러리 0, 회로 최소. 시리얼 첫 실습에 가장 안전한 센서입니다. 공통 빌드의 소스 자리에 그대로 꽂힙니다.</p>
 <div class="meta"><span>analogRead</span><span>채널 1개</span><span>키트 자료 1강 · 5p~</span></div>
 
 <h2><span class="no">◆</span>배선</h2>
@@ -1081,7 +1081,7 @@ void loop() {
 
 <template id="tpl-g03"><div class="crumb">수퍼 테스트베드 LAB — 3주차 아두이노 시리얼 · <b>초음파</b> · HC-SR04 거리</div>
 <h1>초음파 HC-SR04 — 거리</h1>
-<p class="lead">소리를 쏘고 되돌아오는 시간으로 <strong>거리(cm)</strong>를 잽니다. 2주차 "손 거리" 인터랙션을 <strong>물리 소스</strong>로 재현하는 센서 — 손을 가까이/멀리 하면 값이 변해요.</p>
+<p class="lead">소리를 쏘고 되돌아오는 시간으로 <strong>거리(cm)</strong>를 잽니다. 2주차 "손 거리" 인터랙션을 <strong>물리 소스</strong>로 재현하는 센서 — 손을 가까이/멀리 하면 값이 변합니다.</p>
 <div class="meta"><span>pulseIn (라이브러리 0)</span><span>채널 1개</span><span>키트 자료 3강 · 82p~</span></div>
 
 <h2><span class="no">◆</span>배선</h2>
