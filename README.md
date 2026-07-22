@@ -4,6 +4,25 @@ TouchDesigner 인터랙티브 아트 워크숍 자료입니다.
 **모든 자료 한눈에: https://gamsasyo.github.io/STB_InteractiveMapping/Slide/**
 **📦 전체 자료 한 번에: [Download ZIP](https://github.com/gamsasyo/STB_InteractiveMapping/archive/refs/heads/main.zip)**
 
+## 3주차 (7/23) — 아두이노 시리얼
+
+물리 세계의 센서가 CHOP이 되는 날 — 시리얼 통신 · CSV · `Serial DAT → Convert → DAT to CHOP → Rename → Math → Lag → Null`. 아두이노는 "숫자 뱉는 상자", 배우는 건 그 숫자가 TD로 들어오는 통로.
+
+| 자료 | 링크 |
+|---|---|
+| 📺 슬라이드 (웹) | [week3.html](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week3.html) |
+| 🎛 TD 완성본 | 수업 현장 공유 (라이브 빌드) |
+
+**빌드 가이드** — 완성 네트워크 · 단계별 파라미터 · 아두이노 스케치(복붙) · 트러블슈팅:
+
+| 가이드 | 내용 | 링크 |
+|---|---|---|
+| `공통 빌드` | Serial DAT → … → Null — 센서가 뭐든 똑같은 체인 | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week3.html#g01) |
+| `가변저항` | 첫 센서, 값 1개 — `analogRead` (키트 1강) | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week3.html#g02) |
+| `초음파` | HC-SR04 거리 = 손 거리 재현 — `pulseIn` (키트 3강) | [바로가기](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week3.html#g03) |
+
+> 아두이노 회로·IDE 코드 기본기는 **에듀이노 스타터키트 입문편 강의자료 v4.1**(키트 구매 시 제공)로 진행합니다 — 1강 가변저항, 3강 초음파.
+
 ## 2주차 (7/16) — MediaPipe 인터랙션
 
 웹캠이 몸 컨트롤러가 된다 — 손/포즈 트래킹 · 정규화 · 매핑.
@@ -33,10 +52,6 @@ TouchDesigner 인터랙티브 아트 워크숍 자료입니다.
 | 📺 슬라이드 (웹) | [week1.html](https://gamsasyo.github.io/STB_InteractiveMapping/Slide/week1.html) |
 | 📄 01_Basics 강의 PDF | [Basic/01_Basics.pdf](Basic/01_Basics.pdf) |
 | 🎛 TD 완성본 파일 | [TD/week1.toe](TD/week1.toe) — `01_Basic` · `02_Webcam` · `03_Audio` · `04_WaterMirror` |
-
-## 3주차 (7/23) — 아두이노 시리얼 *(예정)*
-
-물리 세계의 센서가 CHOP이 되는 날. 자료는 수업 후 공개됩니다.
 
 ## 📚 TD 기초 자료실 — [`Basic/`](Basic)
 
